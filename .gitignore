@@ -1,0 +1,5 @@
+*.xml*
+mapac_data/
+*.Rproj*
+*.Rhistory
+.RData

@@ -3,3 +3,4 @@ mapac_data/
 *.Rproj*
 *.Rhistory
 .RData
+samples_data/

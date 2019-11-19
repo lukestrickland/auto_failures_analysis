@@ -45,24 +45,26 @@ ggplot(plot.df, aes(failtrial, 1-meanacc)) +geom_point(aes(col=cond), size=3)  +
   )) +ylab ("Error Rate") +xlab("")
 
 #Fit probit model to accuracies
+# 
+# acc_glmer_top <-
+#   glmer(C ~ S * cond * sess * failtrial + (1 |s),
+#         data = cleandats,
+#         family = binomial(link = "probit"))
+# 
+# ss <- getME(acc_glmer_top,c("theta","fixef"))
+# acc_glmer_top2 <- update(acc_glmer_top,
+#                              start = ss,
+#                              control = glmerControl(optCtrl = list(maxfun = 2e4)))
+# 
+# 
+# ss2 <- getME(acc_glmer_top2,c("theta","fixef"))
+# acc_glmer_top3 <- update(acc_glmer_top2,
+#                              start = ss2,
+#                              control = glmerControl(optCtrl = list(maxfun = 2e5)))
 
-acc_glmer_top <-
-  glmer(C ~ S * cond * sess * failtrial + (1 |s),
-        data = cleandats,
-        family = binomial(link = "probit"))
+# save(acc_glmer_top3, file = "img/acc_model.RData")
 
-ss <- getME(acc_glmer_top,c("theta","fixef"))
-acc_glmer_top2 <- update(acc_glmer_top,
-                             start = ss,
-                             control = glmerControl(optCtrl = list(maxfun = 2e4)))
-
-
-ss2 <- getME(acc_glmer_top2,c("theta","fixef"))
-acc_glmer_top3 <- update(acc_glmer_top2,
-                             start = ss2,
-                             control = glmerControl(optCtrl = list(maxfun = 2e5)))
-
-save(acc_glmer_top3, file = "img/acc_model.RData")
+load("img/acc_model.RData")
 
 Anova(acc_glmer_top3)
 

@@ -4,3 +4,4 @@ mapac_data/
 *.Rhistory
 .RData
 samples_data/
+.Rproj.user

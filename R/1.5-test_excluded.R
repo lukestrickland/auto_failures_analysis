@@ -8,17 +8,18 @@ rm(list = ls())
 #requires tidyverse
 source('R/0-extract_functions.R')
 
-xml_files <- dir("XML_logs")
+xml_files <- dir("OLD_data")[-1]
+xml_files <- xml_files[!grepl("ppt7", xml_files)]
 
 for(i in 1:length(xml_files)){
-    splitstrings <- strsplit(xml_files[i], split="_")[[1]]
-    ppt <- gsub("ppt", "", splitstrings[1])
-    sess <- gsub("sess", "", splitstrings[2])
-    block <- gsub("block", "", splitstrings[3])
-    cond <- gsub("\\.xml\\.log", "", splitstrings[5])
-    current_df <- extract_one(ppt=ppt, sess=sess, block= block,  cond=cond)
-    print(i)
-    if(i==1) full_df <- current_df else full_df <- rbind(full_df, current_df)
+  splitstrings <- strsplit(xml_files[i], split="_")[[1]]
+  ppt <- gsub("ppt", "", splitstrings[1])
+  sess <- gsub("sess", "", splitstrings[2])
+  block <- gsub("block", "", splitstrings[3])
+  cond <- gsub("\\.xml\\.log", "", splitstrings[5])
+  current_df <- extract_one(ppt=ppt, sess=sess, block= block,  cond=cond, logdirstr="OLD_data/")
+  print(i)
+  if(i==1) full_df <- current_df else full_df <- rbind(full_df, current_df)
 }
 
 dats <- full_df[, c("ppt", "sess", "block", "cond", "stimulus",
@@ -49,10 +50,6 @@ for (i in unique(dats$ppt)) {
 dats$stimulus <- factor(dats$stimulus, levels = c("nonconflict", "conflict"),
                         labels=c("n", "c"))
 
-# save(dats, file="img/dats_raw.RData")
-
-load("img/dats_raw.RData")
-
 #DATA EXCLUSIONS - NON RESPONSES AND <200MS
 100* length(dats$RT[is.na(dats$RT)])/length(dats$RT) 
 cleandats <- dats[!is.na(dats$RT),]
@@ -79,12 +76,20 @@ cleandats <- cleandats[,c("s", "sess", "block", "cond",
 
 cleandats$RT <- cleandats$RT/1000
 
-save(cleandats, file="img/cleandats.RData")
 
 
 
-###A few checks that the data from the csvs with map/aircraft data
-###align ok with data from xml logs
+accs <-
+  cleandats %>% group_by(s, S, cond, failtrial, sess) %>% 
+  filter(!is.na(R)) %>% summarise(acc = mean(toupper(as.character(S)) == R)) %>%
+  arrange(s) %>% arrange(failtrial)
+
+accs %>% filter(s=='8')
+
+
+
+
+
 
 
 all(full_df$stimulus==full_df$conflict_status)
@@ -106,6 +111,8 @@ all(full_df$autorec[full_df$stimulus=="nonconflict"
                     & !full_df$failtrial & full_df$cond=="AUTO"]=="NON-CONF")
 
 
+full_df <- full_df %>% filter(ppt=="8")
+
 all(full_df$stimulus[full_df$response=="FALSE_ALARM_NON_CONFLICT"]=="conflict")
 all(full_df$stimulus[full_df$response=="FALSE_ALARM_CONFLICT"]=="nonconflict")
 
@@ -122,7 +129,7 @@ table(dats$sess, dats$ppt, dats$cond, dats$block)
 ##check trialnums valid
 
 dats <-
-  dats %>% group_by(ppt, sess, cond) %>% mutate(trial_counter=1:length(RT))
+  dats %>% filter(ppt=='8') %>% group_by(ppt, sess, cond) %>% mutate(trial_counter=1:length(RT))
 
 #check auto failure trials are same
 all(dats$trial_counter[dats$failtrial & dats$cond=="MANUAL"]==
@@ -148,4 +155,3 @@ dats$ac1speed[!dats$failtrial & dats$cond=="MANUAL"]==
 
 dats$DOMS[!dats$failtrial & dats$cond=="MANUAL"]==
   dats$DOMS[!dats$failtrial & dats$cond=="AUTO"]
-

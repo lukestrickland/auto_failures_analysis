@@ -349,12 +349,42 @@ get.pc.effect.predicted <- function(df){
 
 make_model_table <- function (model_summary) {
   
-  model_table <- data.frame(df = model_summary$Df, Chisq= model_summary$Chisq, 
+  model_table <- data.frame(fac= rownames(model_summary), 
+                            df = model_summary$Df, Chisq= model_summary$Chisq, 
                             p = model_summary$Pr)
   model_table$Chisq <- round(model_table$Chisq, 2)
   model_table$p <- format.pval(model_table$p, digits=2, eps= 0.001)
   model_table$p <- gsub("0\\.", ".", model_table$p)  
   model_table
+}
+
+make_contrast_table <- function (contrast_summary) {
+  
+  contrast_summary$p.value <- 
+    as.character(contrast_summary$p.value)
+  
+  contrast_summary$p.value[
+    as.numeric(contrast_summary$p.value) >
+      .001
+    ] <- as.character(round(
+      as.numeric(contrast_summary$p.value[
+        as.numeric(contrast_summary$p.value) >
+          .001
+        ]), 3
+    ))
+  
+  contrast_summary$p.value[
+    as.numeric(contrast_summary$p.value) <
+      .001
+  ] <- "<.001"
+  
+  
+  contrast_summary[,
+            sapply(contrast_summary, class)=="numeric"] <-
+            round( contrast_summary[,
+                                     sapply(contrast_summary, class)=="numeric"],3)
+  pandoc.table(contrast_summary)
+
 }
 
 

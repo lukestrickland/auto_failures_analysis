@@ -71,8 +71,12 @@ Anova(acc_glmer_top3)
 summary(
   contrast(lsmeans(acc_glmer_top3, ~cond|failtrial*sess), 
            method="pairwise")) 
+# 
+# qplot(cleandats %>% filter(s=='22') %>% pull(RT))
+# 
+# ggplot(data=cleandats, aes(RT)) + geom_histogram() + facet_grid(S~s)
 
-
+ggplot(data=cleandats %>% filter(s=='14'), aes(RT)) + geom_histogram() + facet_grid(S~s)
 
 RTs <-cleandats %>% group_by(s, S, cond, failtrial, sess) %>% filter(toupper(S)==R) %>% 
   summarise(RT=mean(RT))%>% arrange(failtrial)

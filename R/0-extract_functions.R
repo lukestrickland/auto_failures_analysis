@@ -1,9 +1,9 @@
 library(tidyverse)
 
-extract_one <- function(ppt, sess, block, cond) {
+extract_one <- function(ppt, sess, block, cond, logdirstr='XML_logs/') {
   
   logFileName <-
-    paste('XML_logs/',"ppt", ppt, "_sess", sess,
+    paste(logdirstr,"ppt", ppt, "_sess", sess,
           '_block', block, '_cond_', cond,
           '.xml.log', sep = '')
   

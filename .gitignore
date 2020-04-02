@@ -1,11 +1,13 @@
 *.xml*
 mapac_data/
 *.Rproj*
-*.Rhistory
-.RData
+*.Rhistory*
+.RData*
 samples_data/
 .Rproj.user
 OLD_SAMPLES/
 auto_top_samples/
 *.Rout
 *.out
+*.docx
+*.html

@@ -4,27 +4,33 @@ load_model("LBA","lba_B.R")
 
 theme_set(theme_simple())
 
+get.creds <- function(samples) {
+  av.thetas <-fixedeffects.meanthetas(samples)[[1]]
+  msds <- cbind(apply(av.thetas, 2, mean), apply(av.thetas, 2, quantile, probs=0.025),
+                apply(av.thetas, 2, quantile, probs=0.975)
+                )
+  colnames(msds) <- c("M", "LCI", "HCI")
+  msds <- data.frame(msds)
+  msds
+}
+
 load("samples_data/CA_top_samples.RData")
 
-msds <- get.msds(auto_anoS_samples[!(names(auto_anoS_samples)=="22")])
+msds <- get.creds(auto_anoS_samples[!(names(auto_anoS_samples)=="22")])
 
 Vs <- msds[grep("mean_v", rownames(msds)),]
 
-Vs$Cond <- "Manual" 
-Vs$Cond[grep("A", rownames(Vs))] <- "Automation"
-Vs$Auto <- "Automation Success"
-Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure"
-Vs$S <- "Conflict"
-Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict"
+
+Vs$Stimulus <- "Conflict"
+Vs$Stimulus[grep("nn", rownames(Vs))] <- "Non-conflict"
 Vs$match <- "Match"
 Vs$match[grep("false", rownames(Vs))] <- "Mismatch"
 
-ggplot(Vs, aes(factor(Auto),M)) + 
-  geom_point(stat = "identity",aes(col=Cond), size=2.5) +
-  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Cond))+ 
-  ylab("Accumulation Rate") + xlab("")+
-  geom_line(aes(y=M, group=Cond, col=Cond), linetype=2) +
-  facet_grid(S ~ match,scales = "free", space = "free") 
+ggplot(Vs, aes(factor(match),M)) + 
+  geom_point(stat = "identity",aes(shape=Stimulus), size=2.5) +
+  geom_errorbar(aes(ymax = HCI, ymin = LCI, width = 0.3))+ 
+  ylab("Accumulation Rate \n (no automation input)") + xlab("")+
+  geom_line(aes(y=M, group=Stimulus ), linetype=2) +xlab("Accumulator")
 
 quantity_nn_NF <- function (thetas) ((thetas[,"mean_v.nn.A.nonf.true",, drop=F] + thetas[,"mean_v.nn.A.nonf.false",, drop=F]) - 
                                (thetas[,"mean_v.nn.M.nonf.true",, drop=F] + thetas[,"mean_v.nn.M.nonf.false",, drop=F]))
@@ -197,10 +203,34 @@ Bs$Session[grep("2", rownames(Bs))] <- "Session Two"
 
 ggplot(Bs, aes(factor(R),M)) + 
   geom_point(stat = "identity",aes(col=Cond), size=2.5) +
-  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Cond))+ 
+  geom_errorbar(aes(ymax = HCI, ymin = LCI, width = 0.3, col=Cond))+ 
   ylab("Threshold") + xlab("Accumulator")+
   geom_line(aes(y=M, group=Cond, col=Cond), linetype=2) +
   facet_grid(.~Session)
+
+
+#Automation input
+
+as <- msds[grep("a\\.", rownames(msds)),]
+
+as$input <- "Excitation"
+as$input[2] <- "Inhibition"
+as[2,1:3] <- as[2,1:3] *-1
+
+ggplot(as, aes(factor(input),M)) + 
+  geom_point(stat = "identity", size=2.5) +
+  geom_errorbar(aes(ymax = HCI, ymin = LCI, width = 0.3)) +xlab ("Automation Input") +ylab("")+
+  ylim(-0.1, 0.7) + geom_hline(aes(yintercept=0), linetype=2)
+
++ 
+  ylab("Threshold") + xlab("Accumulator")+
+  geom_line(aes(y=M, group=Cond, col=Cond), linetype=2) +
+  facet_grid(.~Session)
+
+
+
+
+
 
 
 

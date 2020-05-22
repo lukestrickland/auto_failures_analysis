@@ -11,3 +11,5 @@ auto_top_samples/
 *.out
 *.docx
 *.html
+R/OLD_SCRIPTS/
+*_samples.RData

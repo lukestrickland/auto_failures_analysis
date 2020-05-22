@@ -8,7 +8,7 @@ load("samples_data/CA_top_samples.RData")
 
 theme_set(theme_simple())
 
-pp <- h.post.predict.dmc(CA_top_samples[!(names(auto_anoS_samples)=="22")], factors=c("S", "cond", "failtrial"),
+pp <- h.post.predict.dmc(auto_anoS_samples[!(names(auto_anoS_samples)=="22")], factors=c("S", "cond", "failtrial"),
                          cores=23, save.simulation=TRUE)
 
 ggplot.RA.dmc(pp, xaxis="cond")
@@ -17,8 +17,8 @@ ggplot.RT.dmc(pp, xaxis="cond")
 
 #fit for presentation
 
-pp <- h.post.predict.dmc(auto_anoS_samples[!(names(auto_anoS_samples)=="22")], 
-                         factors=c("S", "cond", "failtrial"),
+pp <- h.post.predict.dmc(CA_top_samples[!(names(auto_anoS_samples)=="22")], 
+                         factors=c("S", "sess", "cond", "failtrial"),
                          cores=23, save.simulation = TRUE)
 
 rescore_column <- function(df) {
@@ -36,7 +36,7 @@ rescore_column <- function(df) {
 pp1 <- lapply(pp, rescore_column)
 
 
-test <- GET.fitgglist.dmc(pp1, factors=c("cond", "failtrial"))
+test <- GET.fitgglist.dmc(pp1, factors=c("cond", "sess", "failtrial"))
 
 accs <- test$pps %>% filter(R=="TRUE") %>% select(-R)
 

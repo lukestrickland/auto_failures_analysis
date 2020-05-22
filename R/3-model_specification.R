@@ -1,21 +1,37 @@
+#This Script sets up the final reported model set for the paper which are then
+# dispatched on a grid system using pbs pro (see grid_dispatch.R)
 
+#It is important that the correct model is loaded with each model specification
+# so load_model is included at the top of the start of each one, even though
+# sometimes it is redundant because the correct model would already be loaded
+# if running the script top to bottom
+
+
+##Create model-ready data frame and load dmc functions
+
+#load dmc
 source("dmc/dmc.R")
+
+create_model_data <- function(file) {
+  load(file)
+  cleandats <- cleandats[!colnames(cleandats) %in% "C"]
+  cleandats <- as.data.frame(cleandats)
+  cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
+                           labels=c("A", "M"))
+  
+  cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
+                           labels=c("nn", "cc"))
+  
+  cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
+  cleandats$s<- factor(cleandats$s)
+  cleandats
+}
+
+cleandats <- create_model_data("img/cleandats.RData")
+
+
+#Full classic LBA model of the experiment
 load_model("LBA", "lba_B.R")
-
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
 
 CA_top_model <- model.dmc(
   p.map = list(
@@ -70,106 +86,10 @@ CA_top_samples <- h.samples.dmc(nmc = 180,
 
 save(CA_top_samples, file="CA_top_samples.RData")
 
+#A classic LBA model in terms of rates, but allows
+# thresholds to be affected by automation via threshold multiplier
 
-
-source("dmc/dmc.R")
-load_model("LBA", "lba_B.R")
-
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
-
-CA_top_thresholds_model <- model.dmc(
-  p.map = list(
-    A = "1",B = c("cond", "sess", "S", "failtrial", "R"), t0 = "1", mean_v = c("S", "cond", "failtrial", "M"),
-    sd_v = c("M"), st0 = "1"),
-  match.map = list(
-    M = list(nn = "N", cc="C")
-  ),
-  factors = list(
-    S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
-    failtrial=c("nonf", "fail")
-  ),
-  constants = c(st0 = 0, sd_v.false = 1
-  ),
-  responses = c("N", "C"),type = "norm"
-)
-
-
-CA_top_thresholds_p.vector  <- c(t0=0.3,A=3,
-                                sd_v.true = 1,
-               
-B.A.1.nn.nonf.N=1,        B.M.1.nn.nonf.N=1,       
- B.A.2.nn.nonf.N=1,        B.M.2.nn.nonf.N=1,        B.A.1.cc.nonf.N=1,       
-  B.M.1.cc.nonf.N=1,        B.A.2.cc.nonf.N=1,        B.M.2.cc.nonf.N=1,       
-B.A.1.nn.fail.N=1,        B.M.1.nn.fail.N=1,        B.A.2.nn.fail.N=1,       
-B.M.2.nn.fail.N=1,        B.A.1.cc.fail.N=1,        B.M.1.cc.fail.N=1,       
-B.A.2.cc.fail.N=1,        B.M.2.cc.fail.N=1,        B.A.1.nn.nonf.C=1,       
- B.M.1.nn.nonf.C=1,        B.A.2.nn.nonf.C=1,        B.M.2.nn.nonf.C=1,       
- B.A.1.cc.nonf.C=1,        B.M.1.cc.nonf.C=1,        B.A.2.cc.nonf.C=1,       
- B.M.2.cc.nonf.C=1,        B.A.1.nn.fail.C=1,        B.M.1.nn.fail.C=1,       
- B.A.2.nn.fail.C=1,        B.M.2.nn.fail.C=1,        B.A.1.cc.fail.C=1,       
- B.M.1.cc.fail.C=1,        B.A.2.cc.fail.C=1,        B.M.2.cc.fail.C=1, 
-  
-  mean_v.nn.A.nonf.true=1,  mean_v.cc.A.nonf.true=1, 
- mean_v.nn.M.nonf.true=1,  mean_v.cc.M.nonf.true=1,
- mean_v.nn.A.fail.true=1, mean_v.cc.A.fail.true=1, 
- mean_v.nn.M.fail.true=1,  mean_v.cc.M.fail.true=1, 
- mean_v.nn.A.nonf.false=0, mean_v.cc.A.nonf.false=0,
- mean_v.nn.M.nonf.false=0,mean_v.cc.M.nonf.false=0, 
- mean_v.nn.A.fail.false=0, mean_v.cc.A.fail.false=0,
- mean_v.nn.M.fail.false=0, mean_v.cc.M.fail.false=0
- )
-
-check.p.vector(CA_top_thresholds_p.vector, CA_top_thresholds_model)
-
-CA_top_thresholds_p.prior <- prior.p.dmc(
-  dists = rep("tnorm", length(CA_top_thresholds_p.vector)),
-  p1=CA_top_thresholds_p.vector,                           
-  p2=c(1,1,1,rep(1, 32), rep(2, 16)),
-  lower=c(0.1, 0,0, rep(0, 32), rep(NA, 16)),
-  upper=c(5,10, rep(Inf, length(CA_top_thresholds_p.vector)-2))
-)
-
-CA_top_thresholds_dm <- data.model.dmc(cleandats,
-                                   CA_top_thresholds_model)
-
-CA_top_thresholds_samples <- h.samples.dmc(nmc = 180,
-                                          CA_top_thresholds_p.prior,
-                                          CA_top_thresholds_dm, thin=20)
-
-save(CA_top_thresholds_samples, file="CA_top_thresholds_samples.RData")
-
-#Top with thresholds multiplicative model
-
-
-source("dmc/dmc.R")
 load_model("LBA", "lba_B_autothres.R")
-
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
 
 tmap <-
   empty.map(list(
@@ -258,23 +178,11 @@ CA_top_thresholdsmult_samples <- h.samples.dmc(nmc = 180,
 save(CA_top_thresholdsmult_samples, file="CA_top_thresholdsmult_samples.RData")
 
 
-source("dmc/dmc.R")
+#Rate constraints
+#Such that automation inhibition/excitation has to act 
+# symmetrically on success and fail trials
+
 load_model("LBA", "lba_B_automation.R")
-
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
 
 mapauto <-
   empty.map(list(
@@ -384,82 +292,9 @@ save(auto_top_samples, file="auto_top_samples.RData")
 
 
 
+#Rate constrained model with no effect of automation condition on thresholds
 
-
-source("dmc/dmc.R")
 load_model("LBA", "lba_B_automation.R")
-
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
-
-mapauto <-
-  empty.map(list(
-         S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
-            failtrial=c("nonf", "fail"),
-             R = c("N", "C")
-  ), 
-    levels=c(
-             "man",
-             "anT","anF",
-             "acT", "acF"))
-
-mapauto[1:32] <- c(
-  "anT","acF","man", "man",
-  "anT","acF","man", "man",
-  
-  "acF","anT","man", "man",
-  "acF","anT","man", "man",
-  
-   "anF","acT","man", "man",
-   "anF","acT","man", "man",
-  
-    "acT","anF","man", "man",
-   "acT","anF","man", "man"
-  
-)
-
-#to make it less constrained (basically the equivalent of freely estimated accumulation rates) I would be able to separate
-# auto evidence for failures and successes - psychologically implausible?
-
-#A few checks on mapmeanv due to mind-bending twisting of levels
-
-mapauto[
-  grepl("M", names(mapauto)) ]
-
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
-
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
-
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
-
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
-
-
-
 
 auto_noB_model <- model.dmc(
   p.map = list(
@@ -511,30 +346,11 @@ auto_noB_samples <- h.samples.dmc(nmc = 180,
 save(auto_noB_samples, file="auto_noB_samples.RData")
 
 
-
-
-
-
-
-source("dmc/dmc.R")
+#Rate constrained model where the effects of automation can't vary
+#based on stimulus type
 load_model("LBA", "lba_B_automation.R")
 
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
-
-mapauto <-
+mapauto_noS <-
   empty.map(list(
          S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
             failtrial=c("nonf", "fail"),
@@ -544,7 +360,7 @@ mapauto <-
              "man",
              "aT","aF"))
 
-mapauto[1:32] <- c(
+mapauto_noS[1:32] <- c(
   "aT","aF","man", "man",
   "aT","aF","man", "man",
   
@@ -564,27 +380,27 @@ mapauto[1:32] <- c(
 
 #A few checks on mapmeanv due to mind-bending twisting of levels
 
-mapauto[
-  grepl("M", names(mapauto)) ]
+mapauto_noS[
+  grepl("M", names(mapauto_noS)) ]
 
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
+mapauto_noS[
+  grepl("nn", names(mapauto_noS)) & grepl("nonf", names(mapauto_noS)) &
+    !grepl("M", names(mapauto_noS)) 
   ]
 
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
+mapauto_noS[
+  grepl("cc", names(mapauto_noS)) & grepl("nonf", names(mapauto_noS)) &
+    !grepl("M", names(mapauto_noS)) 
   ]
 
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
+mapauto_noS[
+  grepl("nn", names(mapauto_noS)) & grepl("fail", names(mapauto_noS)) &
+    !grepl("M", names(mapauto_noS)) 
   ]
 
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
+mapauto_noS[
+  grepl("cc", names(mapauto_noS)) & grepl("fail", names(mapauto_noS)) &
+    !grepl("M", names(mapauto_noS)) 
   ]
 
 
@@ -593,10 +409,10 @@ mapauto[
 auto_anoS_model <- model.dmc(
   p.map = list(
     A = "1",B = c("cond", "sess", "R"), t0 = "1", mean_v = c("S", "M"),
-    sd_v = c("M"), st0 = "1", a= c("MAPAUTO")),
+    sd_v = c("M"), st0 = "1", a= c("mapauto_noS")),
   match.map = list(
     M = list(nn = "N", cc="C"),
-    MAPAUTO = mapauto
+    mapauto_noS = mapauto_noS
   ),
   factors = list(
     S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
@@ -640,81 +456,63 @@ auto_anoS_samples <- h.samples.dmc(nmc = 180,
 save(auto_anoS_samples, file="auto_anoS_samples.RData")
 
 
-
-
-source("dmc/dmc.R")
+#Model where the automation effect is forced to come out in excitation
+#not inhibition
 load_model("LBA", "lba_B_automation.R")
 
-load("img/cleandats.RData")
-cleandats <- cleandats[!colnames(cleandats) %in% "C"]
-cleandats <- as.data.frame(cleandats)
-cleandats$cond <- factor(cleandats$cond, levels=c("AUTO", "MANUAL"),
-                         labels=c("A", "M"))
-
-cleandats$S <- factor(cleandats$S, levels=c("n", "c"),
-                         labels=c("nn", "cc"))
-
-cleandats$R <- factor(cleandats$R, levels=c("N", "C"))
-cleandats$s<- factor(cleandats$s)
-
-
-
-
-mapauto <-
-  empty.map(list(
-         S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
-            failtrial=c("nonf", "fail"),
-             R = c("N", "C")
-  ), 
-    levels=c(
-             "man",
-             "aT","aF"))
-
-mapauto[1:32] <- c(
-  "aT","aF","man", "man",
-  "aT","aF","man", "man",
-  
-  "aF","aT","man", "man",
-  "aF","aT","man", "man",
-  
-   "aF","aT","man", "man",
-   "aF","aT","man", "man",
-  
-    "aT","aF","man", "man",
-   "aT","aF","man", "man"
-  
+auto_anoS_ex_model <- model.dmc(
+  p.map = list(
+    A = "1",B = c("cond", "sess", "R"), t0 = "1", mean_v = c("S", "M"),
+    sd_v = c("M"), st0 = "1", a= c("MAPAUTO")),
+  match.map = list(
+    M = list(nn = "N", cc="C"),
+    MAPAUTO = mapauto_noS
+  ),
+  factors = list(
+    S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
+    failtrial=c("nonf", "fail")
+  ),
+  constants = c(st0 = 0, sd_v.false = 1, a.man=0, a.aF=0
+  ),
+  responses = c("N", "C"),type = "norm"
 )
 
-#to make it less constrained (basically the equivalent of freely estimated accumulation rates) I would be able to separate
-# auto evidence for failures and successes - psychologically implausible?
 
-#A few checks on mapmeanv due to mind-bending twisting of levels
+auto_anoS_ex_p.vector  <- c(t0=0.3,A=3,
+                                sd_v.true = 1,
+               
+  B.A.1.N=2, B.M.1.N=2,             
+   B.A.2.N=2, B.M.2.N=2, B.A.1.C=2,             
+  B.M.1.C=2, B.A.2.C=2,   B.M.2.C=2, 
+  
+  mean_v.nn.true=0,  mean_v.cc.true=0, 
+  mean_v.nn.false=0, mean_v.cc.false=0,
+  a.aT=0
+ )
 
-mapauto[
-  grepl("M", names(mapauto)) ]
+check.p.vector(auto_anoS_ex_p.vector, auto_anoS_ex_model)
 
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
+auto_anoS_ex_p.prior <- prior.p.dmc(
+  dists = rep("tnorm", length(auto_anoS_ex_p.vector)),
+  p1=auto_anoS_ex_p.vector,                           
+  p2=c(1,1,1,rep(1, 8), rep(2, 5)),
+  lower=c(0.1, 0,0, rep(0, 8), rep(NA, 5)),
+  upper=c(5,10, rep(Inf, length(auto_anoS_ex_p.vector)-2))
+)
 
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("nonf", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
+auto_anoS_ex_dm <- data.model.dmc(cleandats,
+                                   auto_anoS_ex_model)
 
-mapauto[
-  grepl("nn", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
+auto_anoS_ex_samples <- h.samples.dmc(nmc = 180,
+                                          auto_anoS_ex_p.prior,
+                                          auto_anoS_ex_dm, thin=20)
 
-mapauto[
-  grepl("cc", names(mapauto)) & grepl("fail", names(mapauto)) &
-    !grepl("M", names(mapauto)) 
-  ]
+save(auto_anoS_ex_samples, file="auto_anoS_ex_samples.RData")
 
 
 
+
+load_model("LBA", "lba_B_automation.R")
 
 auto_anoSnoB_model <- model.dmc(
   p.map = list(
@@ -722,7 +520,7 @@ auto_anoSnoB_model <- model.dmc(
     sd_v = c("M"), st0 = "1", a= c("MAPAUTO")),
   match.map = list(
     M = list(nn = "N", cc="C"),
-    MAPAUTO = mapauto
+    MAPAUTO = mapauto_noS
   ),
   factors = list(
     S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
@@ -764,5 +562,3 @@ auto_anoSnoB_samples <- h.samples.dmc(nmc = 180,
                                           auto_anoSnoB_dm, thin=20)
 
 save(auto_anoSnoB_samples, file="auto_anoSnoB_samples.RData")
-
-

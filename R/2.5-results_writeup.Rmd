@@ -3,8 +3,8 @@ title: "Automation Failures in ATC: Standard Results"
 author: "ljgs"
 date: "20/11/2019"
 output:
-  html_document: default
   word_document: default
+  html_document: default
   pdf_document: default
 ---
 by Luke Strickland
@@ -218,7 +218,7 @@ RT_cap <- "*Figure 4.* Response Times (RT). Each panel corresponds to responses 
 ```
 
 
-```{r response_RT_graph, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=RT_cap}
+```{r response_RT_graph 1, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=RT_cap}
 mean_RTs <- RTs %>% group_by(Stimulus, Condition, Automation,Session) %>% summarise(meanRT=mean(RT))
 
 searr= se2(RTs, facs= c("Stimulus", "Condition", "Automation", "Session"), dvnam="RT", sfac="s")

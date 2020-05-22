@@ -230,6 +230,91 @@ ggplot(as, aes(factor(input),M)) +
 
 
 
+# 
+inh <- colnames(auto_anoS_samples[[1]]$theta)[grep("a.aF",
+                           colnames(auto_anoS_samples[[1]]$theta))][-5]
+
+samples_noinh <- auto_anoS_samples
+
+for (i in 1:length(samples_noinh)){
+
+  samples_noinh[[i]]$theta[,inh,] <- 0.00000
+  samples_noinh[[i]]$theta[,"a.aT",] <- samples_noinh[[i]]$theta[,"a.aT",]+0.4
+
+}
+
+noinh_PP <- h.post.predict.dmc(samples_noinh,
+                              save.simulation = TRUE,
+                              cores = 14)
+
+
+
+
+rescore_column <- function(df) {
+  df$R <- factor(as.character(toupper(substr(df$S,1,1))==df$R))
+  new_data <- attr(df, "data")
+  new_data$R <- factor(as.character(toupper(substr(new_data$S,1,1))==new_data$R))
+#  new_data <- new_data %>% select(C, everything()) 
+  #%>% select(-R)
+  attr(df, "data") <- new_data
+#  df %>% select(reps, C, everything())
+  #%>% select(-R)
+  df
+}
+
+pp1 <- lapply(noinh_PP[!(names(auto_anoS_samples)=="22")], rescore_column)
+
+
+test <- GET.fitgglist.dmc(pp1, factors=c("cond", "failtrial"))
+
+accs <- test$pps %>% filter(R=="TRUE") %>% select(-R)
+
+accs$cond <- factor(accs$cond, levels=c("A", "M"), labels =
+                      c("Automation", "Manual"))
+
+accs$failtrial <- factor(accs$failtrial, levels=c("nonf", "fail"), labels =
+                      c("Automation Success", "Automation Failure"))
+
+ggplot.RP.dmc(accs, xaxis="cond") +xlab("Condition") +ylab("Accuracy")
+
+corRTs <- test$RTs %>% filter(R=="TRUE") %>% select(-R)
+
+corRTs$cond <- factor(corRTs$cond, levels=c("A", "M"), labels =
+                      c("Automation", "Manual"))
+
+corRTs$failtrial <- factor(corRTs$failtrial, levels=c("nonf", "fail"), labels =
+                      c("Automation Success", "Automation Failure"))
+
+ggplot.RT.dmc(corRTs, xaxis="cond") +xlab("Condition") +ylab("Correct RT")
+
+
+
+
+
+
+
+avinh <- get.effects.dmc(PPs_avinh, get.diff.PM)
+avPrate <- get.effects.dmc(PPs_avPrates, get.diff.PM)
+avPthres <- get.effects.dmc(PPs_avthres_PM, get.diff.PM)
+full <- get.effects.dmc(pp_orig, get.diff.PM)
+avthres <- get.effects.dmc(PPs_avthres_OT, get.diff.PM)
+
+
+noslope <-  get.effects.dmc(noslope_PP, get.diff.PM)
+noslope$model <- "No Learning"
+
+avinh$model <- "Averaged Inhibition"
+avPrate$model <- "Averaged PM Accumulation"
+avPthres$model <-  "Averaged PM Threshold"
+full$model <- "Full Model"
+avthres$model <- "Averaged OT Thresholds"
+
+all_effects_PM <- rbind(avinh, avPrate, avPthres, avthres, noslope, full)
+
+all_effects_PM$stat <- "Accuracy (Single - Multiple)"
+all_effects_PM$stat[grep("RT", rownames(all_effects_PM))] <- "RT (Multiple - Single)"
+
+# 
 
 
 

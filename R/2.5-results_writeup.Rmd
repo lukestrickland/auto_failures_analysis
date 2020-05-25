@@ -19,6 +19,7 @@ library(lme4)
 library(car)
 library(lsmeans)
 library(pander)
+options(digits=2)
 source("R/0-analysis_functions.R")
 
 load("img/cleandats.RData")
@@ -71,16 +72,16 @@ cond_auto_se <- arr2df(
 ```
 
 
-#####Accuracy
+##### Accuracy
 Accuracies are displayed in Figure 2. There were main effects of stimulus type, session, 
 condition, and automation success. Responses were more accurate to conflict trials
-(*M* = `r round(S[S$Stimulus=="Conflict",2],2)`, *SE* = `r round(S_se["Conflict"],  2)`)
+(*M* = `r S[S$Stimulus=="Conflict",2]`, *SE* = `r S_se["Conflict"]`)
 than to non-conflict trials
-(*M* = `r round(S[S$Stimulus=="Non-conflict",2],2)`, *SE* = `r round(S_se["Non-conflict"],  2)`).
+(*M* = `r S[S$Stimulus=="Non-conflict",2]`, *SE* = `r S_se["Non-conflict"]`).
 Accuracy was higher on session one
-(*M* = `r round(sess[sess$Session=="One",2],2)`, *SE* = `r round(sess_se["One"],  2)`)
+(*M* = `r sess[sess$Session=="One",2]`, *SE* = `r sess_se["One"]`)
 than on session two
-(*M* = `r round(sess[sess$Session=="Two",2],2)`, *SE* = `r round(sess_se["Two"],  2)`)
+(*M* = `r sess[sess$Session=="Two",2]`, *SE* = `r sess_se["Two"]`)
 . The effects of automation condition and automation success interacted, 
 with accuracy higher in the automation condition than the manual condition when automation succeeded
 and much lower when the automation failed, as compared with matched manual trials (Table 2). 
@@ -177,35 +178,35 @@ cond_auto_se_RT <- arr2df(
 ```
 
 
-#####Response Times
+##### Response Times
 Mean correct RTs are displayed in Figure 3. There were main effects of stimulus type, session, 
 condition, and automation success. Correct responses were slower to conflict trials
-(*M* = `r round(S_RT[S_RT$Stimulus=="Conflict",2],2)`, *SE* = `r round(S_se_RT["Conflict"],  2)`)
+(*M* = `r S_RT[S_RT$Stimulus=="Conflict",2]`, *SE* = `r S_se_RT["Conflict"]`)
 than to non-conflict trials
-(*M* = `r round(S_RT[S_RT$Stimulus=="Non-conflict",2],2)`, *SE* = `r round(S_se_RT["Non-conflict"],  2)`). As displayed in Table 3, the effects of 
+(*M* = `r S_RT[S_RT$Stimulus=="Non-conflict",2]`, *SE* = `r S_se_RT["Non-conflict"]`). As displayed in Table 3, the effects of 
 condition and automation success interacted. On trials where 
 the automation was successful, correct RTs were not different across
 manual and automated conditions. By contrast, there were large differences
 in correct RT between automation failure trials and matched manual trials. 
 The effects of condition and session also interacted. On session 1,
 RTs were slower in the automation condition
-(*M* = `r round(sess_cond_RT %>% filter(Session=='One' & Condition=='Automation') %>% 
-pull('mean(RT)'),2)`,
-*SE* = `r round(sess_cond_se_RT["One", "Automation"],  2)`)
+(*M* = `r sess_cond_RT %>% filter(Session=='One' & Condition=='Automation') %>% 
+pull('mean(RT)')`,
+*SE* = `r sess_cond_se_RT["One", "Automation"]`)
 than in the manual condition
-(*M* = `r round(sess_cond_RT %>% filter(Session=='One' & Condition=='Manual') %>% 
-pull('mean(RT)'),2)`,
-*SE* = `r round(sess_cond_se_RT["One", "Manual"],  2)`)
+(*M* = `r sess_cond_RT %>% filter(Session=='One' & Condition=='Manual') %>% 
+pull('mean(RT)')`,
+*SE* = `r sess_cond_se_RT["One", "Manual"]`)
 .
 On session two, 
 RTs were less substantially slower in the automation condition
-(*M* = `r round(sess_cond_RT %>% filter(Session=='Two' & Condition=='Automation') %>% 
-pull('mean(RT)'),2)`,
-*SE* = `r round(sess_cond_se_RT["Two", "Automation"],  2)`)
+(*M* = `r sess_cond_RT %>% filter(Session=='Two' & Condition=='Automation') %>% 
+pull('mean(RT)')`,
+*SE* = `r sess_cond_se_RT["Two", "Automation"]`)
 than in the manual condition
-(*M* = `r round(sess_cond_RT %>% filter(Session=='Two' & Condition=='Manual') %>% 
-pull('mean(RT)'),2)`,
-*SE* = `r round(sess_cond_se_RT["Two", "Manual"],  2)`), 
+(*M* = `r sess_cond_RT %>% filter(Session=='Two' & Condition=='Manual') %>% 
+pull('mean(RT)')`,
+*SE* = `r sess_cond_se_RT["Two", "Manual"]`), 
 with the difference failing to cross the p <.005 threshold.
 Follow up comparisons of the (non-significant) three way interaction 
 of between session, condition and automation success (supplementary materials) indicate that differences

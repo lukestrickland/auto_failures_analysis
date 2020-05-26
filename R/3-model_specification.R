@@ -562,3 +562,104 @@ auto_anoSnoB_samples <- h.samples.dmc(nmc = 180,
                                           auto_anoSnoB_dm, thin=20)
 
 save(auto_anoSnoB_samples, file="auto_anoSnoB_samples.RData")
+
+
+
+load_model("LBA", "lba_B_automation.R")
+
+tmap <-
+  empty.map(list(
+         S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
+            failtrial=c("nonf", "fail"),
+             R = c("N", "C")
+  ), 
+    levels=c(
+             "MANC1", "MANN1",
+             "AnNS1","AnNF1",
+             "AnCS1", "AnCF1",
+              "AcNS1","AcNF1",
+             "AcCS1", "AcCF1",
+             
+              "MANC2", "MANN2",
+             "AnNS2","AnNF2",
+             "AnCS2", "AnCF2",
+              "AcNS2","AcNF2",
+             "AcCS2", "AcCF2"
+             
+             
+             ))
+
+tmap[1:32] <- c(
+  "AnNS1","AcNS1","MANN1", "MANN1",
+  "AnNS2","AcNS2","MANN2", "MANN2",
+  
+  "AnNF1","AcNF1","MANN1", "MANN1",
+  "AnNF2","AcNF2","MANN2", "MANN2",
+  
+  "AnCS1","AcCS1","MANC1", "MANC1",
+  "AnCS2","AcCS2","MANC2", "MANC2",
+  
+  "AnCF1","AcCF1","MANC1", "MANC1",
+  "AnCF2","AcCF2","MANC2", "MANC2"
+  
+)
+
+
+
+auto_thresholds_top_model <- model.dmc(
+  p.map = list(
+    A = "1",B = c("MAPTHRES"), t0 = "1", mean_v = c("S", "M"),
+    sd_v = c("M"), st0 = "1", a= c("MAPAUTO")),
+  match.map = list(
+    M = list(nn = "N", cc="C"),
+    MAPAUTO = mapauto,
+    MAPTHRES=tmap
+  ),
+  factors = list(
+    S = c("nn", "cc"), cond = c("A", "M"), sess = c("1", "2"),
+    failtrial=c("nonf", "fail")
+  ),
+  constants = c(st0 = 0, sd_v.false = 1, a.man=0
+  ),
+  responses = c("N", "C"),type = "norm"
+)
+
+
+auto_thresholds_top_p.vector  <- c(t0=0.3,A=3,
+                                sd_v.true = 1,
+               
+  B.MANC1=1,         B.MANN1=1,         
+  B.AnNS1=1,         B.AnNF1=1,        
+  B.AnCS1=1,         B.AnCF1=1,        
+  B.AcNS1=1,         B.AcNF1=1,        
+  B.AcCS1=1,        
+  B.AcCF1=1,         B.MANC2=1,        
+  B.MANN2=1,         B.AnNS2=1,        
+  B.AnNF2=1,        
+  B.AnCS2=1,         B.AnCF2=1,       
+  B.AcNS2=1,         B.AcNF2=1,        
+  B.AcCS2=1,         B.AcCF2=1,
+  
+  mean_v.nn.true=0,  mean_v.cc.true=0, 
+  mean_v.nn.false=0, mean_v.cc.false=0,
+  a.anT=0, a.anF=0, a.acT=0, a.acF=0
+ )
+
+check.p.vector(auto_thresholds_top_p.vector, auto_thresholds_top_model)
+
+auto_thresholds_top_p.prior <- prior.p.dmc(
+  dists = rep("tnorm", length(auto_thresholds_top_p.vector)),
+  p1=auto_thresholds_top_p.vector,                           
+  p2=c(1,1,1,rep(1, 20), rep(2, 8)),
+  lower=c(0.1, 0,0, rep(0, 20), rep(NA, 8)),
+  upper=c(5,10, rep(Inf, length(auto_thresholds_top_p.vector)-2))
+)
+
+auto_thresholds_top_dm <- data.model.dmc(cleandats,
+                                   auto_thresholds_top_model)
+
+auto_thresholds_top_samples <- h.samples.dmc(nmc = 180,
+                                          auto_thresholds_top_p.prior,
+                                          auto_thresholds_top_dm, thin=20)
+
+save(auto_thresholds_top_samples, file="auto_thresholds_top_samples.RData")

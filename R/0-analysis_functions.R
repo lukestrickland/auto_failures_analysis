@@ -169,178 +169,6 @@ arr2df=function(arr) {
 }
 
 
-label_msds <- function(msds) {
-  msds$E <- NA
-  msds$day <- NA
-  msds$R <- NA
-  msds$S <- NA
-  msds$ot_correct <- NA
-  msds$isPM <- NA
-  msds$ot_match <- NA
-  
-  old_rnames <- rownames(msds)
-  
-  msds$E[grep ("I", old_rnames)] <- "Nc"
-  msds$E[grep ("U", old_rnames)] <- "Wc"
-  
-  msds$R[grep ("N", old_rnames)] <- "Non-word"
-  msds$R[grep ("W", old_rnames)] <- "Word"
-  msds$R[grep ("P", old_rnames)] <- "PM"
-  
-  msds$day[grep ("one", old_rnames)] <- "One"
-  msds$day[grep ("two", old_rnames)] <- "Two"
-  msds$day[grep ("1$", old_rnames)] <- "One"
-  msds$day[grep ("2$", old_rnames)] <- "Two"
-  
-  msds$S[grep ("nn", old_rnames)] <- "Non-word Trial"
-  msds$S[grep ("ww", old_rnames)] <- "Word Trial"
-  msds$S[grep ("pw", old_rnames)] <- "PMW Trial"
-  msds$S[grep ("pn", old_rnames)] <- "PMN Trial"
-  
-  msds$ot_correct[grep ("mean_v.*n", old_rnames)] <- "Non-word"
-  msds$ot_correct[grep ("mean_v.*w", old_rnames)] <- "Word"
-  
-  msds$ot_match[!(msds$R == "PM") & !is.na(msds$S)] <- "Mismatch"
-  msds$ot_match[msds$ot_correct == msds$R] <- "Match"
-  
-  
-  msds$isPM[!grepl("mean_v.*p", old_rnames) &
-              !is.na(msds$S)] <- "nonPM"
-  msds$isPM[grep ("mean_v.*p", old_rnames)] <- "PM"
-  
-  msds$day <- factor(msds$day, levels = c("One", "Two"))
-  msds$R <- factor(msds$R, levels = c("Non-word", "Word", "PM"))
-  msds$E <- factor(msds$E)
-  msds$S <- factor(msds$S,
-                   c("Non-word Trial", "PMN Trial",
-                     "Word Trial", "PMW Trial"))
-  msds
-}
-
-
-label_effects <- function (effects) {
-  effects$E <- NA
-  effects$R <- NA
-  effects$S <- NA
-  effects$E[grep("Nc", rownames(effects))] <- "Nc"
-  effects$E[grep("Wc", rownames(effects))] <- "Wc"
-  effects$R[grep("N$", rownames(effects))] <- "N"
-  effects$R[grep("W$", rownames(effects))] <- "W"
-  effects$S[grep("w", rownames(effects))] <- "Word Trial"
-  effects$S[grep("n", rownames(effects))] <- "Non-word Trial"
-  effects
-}
-
-
-#functions to calculate quantities for posterior predictive summaries
-
-get.diff.PM.Rtype <- function(df) {
-  
-  NcW <- length(df$RT[df$E=="I" & df$R=="W" & (df$S=="pw"|df$S=="pn")])/
-    length(df$RT[df$E=="I"& (df$S=="pw"|df$S=="pn")])
-  
-  WcW <- length(df$RT[df$E=="U" & df$R=="W"& (df$S=="pw"|df$S=="pn")])/
-    length(df$RT[df$E=="U"& (df$S=="pw"|df$S=="pn")])
-  
-  NcN <- length(df$RT[df$E=="I" & df$R=="N"& (df$S=="pw"|df$S=="pn")])/
-    length(df$RT[df$E=="I"& (df$S=="pw"|df$S=="pn")])
-  
-  WcN <- length(df$RT[df$E=="U" & df$R=="N"& (df$S=="pw"|df$S=="pn")])/
-    length(df$RT[df$E=="U"& (df$S=="pw"|df$S=="pn")])
-  # 
-  #   out <- c(NcW-WcW+WcN-NcN)
-  #   names(out) <- c("NcW-WcW+WcN-NcN")
-  out <- mean(c((NcW-WcW), (WcN-NcN)))
-  names(out) <- c("NcW-WcW+WcN-NcN")
-  out
-}
-
-
-get.diff.PM.RT <- function(df) {
-  
-  NcW <- mean(df$RT[df$E=="I" & df$R=="W" & (df$S=="pw"|df$S=="pn")])
-  WcW <- mean(df$RT[df$E=="U" & df$R=="W"& (df$S=="pw"|df$S=="pn")])
-  
-  NcN <- mean(df$RT[df$E=="I" & df$R=="N"& (df$S=="pw"|df$S=="pn")])
-  WcN <- mean(df$RT[df$E=="U" & df$R=="N"& (df$S=="pw"|df$S=="pn")])
-  
-  # out <- c((WcW-NcW) + (NcN-WcN))
-  # names(out) <- c("(WcW-NcW) + (NcN-WcN)")
-  
-  out <- mean(c((WcW-NcW),(NcN-WcN)))
-  names(out) <- c("(WcW-NcW) + (NcN-WcN)")
-  
-  out
-}
-
-get.diff.OT.Rtype <- function(df) {
-  
-  NcW <- length(df$RT[df$E=="I" & df$R=="W" & (df$S=="ww"|df$S=="nn")])/
-    length(df$RT[df$E=="I"& (df$S=="ww"|df$S=="nn")])
-  
-  WcW <- length(df$RT[df$E=="U" & df$R=="W"& (df$S=="ww"|df$S=="nn")])/
-    length(df$RT[df$E=="U"& (df$S=="ww"|df$S=="nn")])
-  
-  NcN <- length(df$RT[df$E=="I" & df$R=="N"& (df$S=="ww"|df$S=="nn")])/
-    length(df$RT[df$E=="I"& (df$S=="ww"|df$S=="nn")])
-  
-  WcN <- length(df$RT[df$E=="U" & df$R=="N"& (df$S=="ww"|df$S=="nn")])/
-    length(df$RT[df$E=="U"& (df$S=="ww"|df$S=="nn")])
-  
-  # out <- c(NcW-WcW+WcN-NcN)
-  # names(out) <- c("NcW-WcW+WcN-NcN")
-  
-  out <- mean(c((NcW-WcW), (WcN-NcN)))
-  names(out) <- c("NcW-WcW+WcN-NcN")
-  
-  out
-}
-
-
-
-get.diff.OT.RT <- function(df) {
-  
-  NcW <- mean(df$RT[df$E=="I" & df$R=="W" & (df$S=="ww"|df$S=="nn")])
-  WcW <- mean(df$RT[df$E=="U" & df$R=="W"& (df$S=="ww"|df$S=="nn")])
-  
-  NcN <- mean(df$RT[df$E=="I" & df$R=="N"& (df$S=="ww"|df$S=="nn")])
-  WcN <- mean(df$RT[df$E=="U" & df$R=="N"& (df$S=="ww"|df$S=="nn")])
-  
-  # out <- c((WcW-NcW) + (NcN-WcN))
-  # names(out) <- c("(WcW-NcW) + (NcN-WcN)")
-  
-  out <- mean(c((WcW-NcW),(NcN-WcN)))
-  names(out) <- c("(WcW-NcW) + (NcN-WcN)")
-  
-  out
-}
-
-
-
-get.diff.PM.perf <- function(df) {
-  
-  NcNP <- length(df$RT[df$E=="I" & df$R=="P" & df$S=="pn"])/
-    length(df$RT[df$E=="I"& df$S=="pn"])
-  
-  WcNP <- length(df$RT[df$E=="U" & df$R=="P" & df$S=="pn"])/
-    length(df$RT[df$E=="U"& df$S=="pn"])
-  
-  NcWP <- length(df$RT[df$E=="I" & df$R=="P" & df$S=="pw"])/
-    length(df$RT[df$E=="I"& df$S=="pw"])
-  
-  WcWP <- length(df$RT[df$E=="U" & df$R=="P" & df$S=="pw"])/
-    length(df$RT[df$E=="U"& df$S=="pw"])
-  # 
-  out <- c(NcNP - WcNP+ WcWP - NcWP)
-  names(out) <- c("NcP-WcP+WcP-NcP")
-  
-  # out <- mean(c((NcNP-WcNP), (WcWP - NcWP)))
-  # names(out) <- c("NcP-WcP+WcP-NcP")
-  out
-}
-
-
-
 get.pc.effect.predicted <- function(df){
   out<- cbind(df,(df$mean/df$data) *100)
   names(out)[length(out)] <- "pc"
@@ -383,7 +211,12 @@ make_contrast_table <- function (contrast_summary) {
             sapply(contrast_summary, class)=="numeric"] <-
             round( contrast_summary[,
                                      sapply(contrast_summary, class)=="numeric"],3)
-  pandoc.table(contrast_summary)
+  
+  drop_cols <- c("estimate", "SE", "df")
+
+  pandoc.table(
+    contrast_summary %>% select(-one_of(drop_cols))
+    )
 
 }
 

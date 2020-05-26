@@ -54,6 +54,7 @@ RTs <- cleandats %>% group_by(s, Stimulus, Condition, Automation, Session) %>%
   filter(C) %>% 
   summarise(RT=mean(RT))%>% arrange(Automation)
 
+
 ```
 
 ```{r accuracy_descriptives_fortext, echo= FALSE, message=FALSE, warning=FALSE}
@@ -82,12 +83,12 @@ Accuracy was higher on session one
 (*M* = `r sess[sess$Session=="One",2]`, *SE* = `r sess_se["One"]`)
 than on session two
 (*M* = `r sess[sess$Session=="Two",2]`, *SE* = `r sess_se["Two"]`)
-. The effects of automation condition and automation success interacted, 
+. Critically, the effects of automation condition and automation success interacted, 
 with accuracy higher in the automation condition than the manual condition when automation succeeded
 and much lower when the automation failed, as compared with matched manual trials (Table 2). 
 These results suggest that participants did use the automation to their advantage, 
-but on trials where the automation failed, it imposed a substantial cost to their accuracy.
-However, importantly, accuracy on automation failure trials was far from floor, suggesting
+but on trials where the automation failed, it imposed a substantial cost to their accuracy (misuse).
+Importantly, accuracy on automation failure trials was far from floor, suggesting
 that participants did not rely on the automation entirely. 
 
 
@@ -111,27 +112,6 @@ plot.df <- full_join(mean_accs, se_accs)
 ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition), size=3)  +
   geom_line(aes(y=meanacc, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ 
   facet_grid(Session~Stimulus) + geom_errorbar(aes(
-    ymax = meanacc + seacc,
-    ymin = meanacc - seacc,
-    colour = Condition
-  )) +ylab ("Accuracy") +xlab("")
-
-```
-
-```{r response_accuracy_AMPC, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=acc_cap}
-mean_accs <- accs %>% group_by(Stimulus, Condition, Automation) %>%
-  summarise(meanacc=mean(acc))
-
-searr= se2(accs, facs= c("Stimulus", "Condition", "Automation"),
-dvnam="acc", sfac="s")
-se_accs <- as.data.frame.table(searr)
-colnames(se_accs)[colnames(se_accs)=="Freq"] <- "seacc"
-
-plot.df <- full_join(mean_accs, se_accs)
-
-ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition), size=3)  +
-  geom_line(aes(y=meanacc, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ 
-  facet_grid(.~Stimulus) + geom_errorbar(aes(
     ymax = meanacc + seacc,
     ymin = meanacc - seacc,
     colour = Condition
@@ -183,12 +163,14 @@ Mean correct RTs are displayed in Figure 3. There were main effects of stimulus 
 condition, and automation success. Correct responses were slower to conflict trials
 (*M* = `r S_RT[S_RT$Stimulus=="Conflict",2]`, *SE* = `r S_se_RT["Conflict"]`)
 than to non-conflict trials
-(*M* = `r S_RT[S_RT$Stimulus=="Non-conflict",2]`, *SE* = `r S_se_RT["Non-conflict"]`). As displayed in Table 3, the effects of 
+(*M* = `r S_RT[S_RT$Stimulus=="Non-conflict",2]`, *SE* = `r S_se_RT["Non-conflict"]`). Crucially, as displayed in Table 3, the effects of 
 condition and automation success interacted. On trials where 
-the automation was successful, correct RTs were not different across
-manual and automated conditions. By contrast, there were large differences
-in correct RT between automation failure trials and matched manual trials. 
-The effects of condition and session also interacted. On session 1,
+the automation was successful, correct RTs were not subsantially different across
+manual and automated conditions. By contrast, correct RTs 
+were substantially slower on trials where automation failed,
+as compared with matched manual trials.
+
+The effects of condition and session interacted. On session 1,
 RTs were slower in the automation condition
 (*M* = `r sess_cond_RT %>% filter(Session=='One' & Condition=='Automation') %>% 
 pull('mean(RT)')`,
@@ -215,7 +197,7 @@ but differences between failure trials and matched manual trials remained.
 
 
 ```{r echo= FALSE}
-RT_cap <- "*Figure 4.* Response Times (RT). Each panel corresponds to responses to one typer of stimulus on one experimental session. The error bars included were calculated using the Morey (2008) bias-corrected method for within-subjects error bars."
+RT_cap <- "*Figure 4.* Correct Response Times (RTs). Each panel corresponds to responses to one typer of stimulus on one experimental session. The error bars included were calculated using the Morey (2008) bias-corrected method for within-subjects error bars."
 ```
 
 
@@ -233,26 +215,6 @@ plot.df <- full_join(mean_RTs, se_RTs)
 ggplot(plot.df, aes(Automation, meanRT)) +geom_point(aes(col=Condition), size=3)  + 
   geom_line(aes(y=meanRT, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ ylab("Mean RT")+
   facet_grid(Session~Stimulus) + geom_errorbar(aes(
-    ymax = meanRT + seRT,
-    ymin = meanRT - seRT,
-    colour = Condition
-  ))
-```
-
-```{r response_RT_graph, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=RT_cap}
-mean_RTs <- RTs %>% group_by(Stimulus, Condition, Automation) %>% summarise(meanRT=mean(RT))
-
-searr= se2(RTs, facs= c("Stimulus", "Condition", "Automation"), dvnam="RT", sfac="s")
-se_RTs <- as.data.frame.table(searr)
-colnames(se_RTs)[colnames(se_RTs)=="Freq"] <- "seRT"
-
-
-
-plot.df <- full_join(mean_RTs, se_RTs)
-
-ggplot(plot.df, aes(Automation, meanRT)) +geom_point(aes(col=Condition), size=3)  + 
-  geom_line(aes(y=meanRT, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ ylab("Mean RT")+
-  facet_grid(.~Stimulus) + geom_errorbar(aes(
     ymax = meanRT + seRT,
     ymin = meanRT - seRT,
     colour = Condition
@@ -279,6 +241,9 @@ pandoc.table(
 )
 
 ```
+
+
+
 
 
 <!-- mean_RTs <- RTs %>% group_by(S, cond, failtrial,sess) %>% summarise(meanRT=mean(RT)) -->

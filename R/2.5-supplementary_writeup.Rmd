@@ -17,6 +17,7 @@ library(lme4)
 library(car)
 library(lsmeans)
 library(pander)
+options(digits=2)
 source("R/0-analysis_functions.R")
 
 load("img/cleandats.RData")
@@ -53,8 +54,16 @@ RTs <- cleandats %>% group_by(s, Stimulus, Condition, Automation, Session) %>%
 
 ```
 
+Table S1
 
-###Fit probit model to accuracies
+*Wald Chi-Square significance tests for conflict detection accuracy. A generalized linear
+mixed-effects model was fitted to every trial, with a binomial probit link 
+function. Random intercepts were included for each
+participant. In addition to examining experimental condition (automated vs manual),
+'Automation' (a factor denoting whether the automation succeeded or failed)
+and stimulus type (conflict/non-conflict), 
+we included a 'session' factor to account for
+effects of task repetition.*
 
 ```{r accuracy_model, echo= FALSE, message=TRUE, warning=TRUE, results="asis"}
 # 
@@ -83,15 +92,30 @@ pandoc.table(
 
 ```
 
+Table S2
 
-#### Accuracy contrast - Condition x Automation Failure
+*Follow up significance tests of the difference in conflict detection accuracy
+across conditions, conditional on whether the automation succeeded or failed. 
+The z.ratio is the mean of the effect divided by its standard error.
+Tukey adjustments were applied to the included p-values.*
+
 ```{r ldt_accuracy_trial_range, echo= FALSE, message=FALSE, warning=FALSE, results="asis",fig.height = 3, fig.width = 4}
 make_contrast_table(summary(
   contrast(lsmeans(acc_glmer_top3, ~Condition|Automation), 
            method="pairwise")) %>% select(-df))
 
 ```
-###Model of mean correct RT
+
+
+Table S3
+
+*Wald Chi-Square significance tests for ongoing task RT. A linear
+mixed-effects model was fitted to mean correct PM RTs. Random intercepts were included for each
+participant. In addition to examining experimental condition (automated vs manual),
+'Automation' (a factor denoting whether the automation succeeded or failed)
+and stimulus type (conflict/non-conflict), 
+we included a 'session' factor to account for
+effects of task repetition.*
 
 ```{r RT_model, echo= FALSE, message=TRUE, warning=TRUE, results="asis"}
 
@@ -103,19 +127,44 @@ pandoc.table(
 
 ```
 
+Table S4
 
+*Follow up significance tests of the differences in RT across
+experimental conditions, conditional on whether the automation
+succeeded or failed. Tukey adjustments were applied to the included p-values.*
 
-```{r RT_contrasts, echo= FALSE, message=FALSE, warning=FALSE, results="asis"}
+```{r RT_contrasts_1, echo= FALSE, message=FALSE, warning=FALSE, results="asis"}
 
 make_contrast_table(summary(
   contrast(lsmeans(RT_model, ~Condition|Automation), 
            method="pairwise")))
 
+```
+
+Table S5
+
+*Follow up significance tests of the differences in RT across
+experimental conditions, conditional on whether it was session 1 
+or session 2 of the experiment. Tukey adjustments were applied to the included p-values.*
+
+
+```{r RT_contrasts_2, echo= FALSE, message=FALSE, warning=FALSE, results="asis"}
 make_contrast_table(summary(
   contrast(lsmeans(RT_model, ~Condition|Session),
            method="pairwise")))
 
+```
 
+
+Table S5
+
+*Follow up significance tests of the differences in RT across
+experimental conditions, conditional on whether it was session 1 
+or session 2 of the experiment, and
+whether the automation provided the correct or incorrect
+recommendation. Tukey adjustments were applied to the included p-values.*
+
+```{r RT_contrasts_3, echo= FALSE, message=FALSE, warning=FALSE, results="asis"}
 make_contrast_table(summary(
   contrast(lsmeans(RT_model, ~Condition|Session * Automation),
            method="pairwise")))

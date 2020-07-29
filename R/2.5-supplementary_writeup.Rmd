@@ -1,5 +1,5 @@
 ---
-title: "Automation Failures in ATC: Standard Results"
+title: "Automation Failures in ATC: Supplementary Results"
 author: "ljgs"
 date: "20/11/2019"
 output:
@@ -16,6 +16,7 @@ library(ggplot2)
 library(lme4)
 library(car)
 library(lsmeans)
+library(gridExtra)
 library(pander)
 options(digits=2)
 source("R/0-analysis_functions.R")
@@ -51,6 +52,7 @@ accs <-
 RTs <- cleandats %>% group_by(s, Stimulus, Condition, Automation, Session) %>% 
   filter(C) %>% 
   summarise(RT=mean(RT))%>% arrange(Automation)
+
 
 ```
 
@@ -168,5 +170,258 @@ recommendation. Tukey adjustments were applied to the included p-values.*
 make_contrast_table(summary(
   contrast(lsmeans(RT_model, ~Condition|Session * Automation),
            method="pairwise")))
+
+```
+
+
+## Modelling adaptive threshold responses to automation
+Our model was parameterized the same way as the model reported
+in text, with the exception of thresholds. To allow thresholds to
+vary in response to automation, we included a "threshold multiplier"
+parameter for each threshold on both automation correct and incorrect trials.
+The threshold level in automation conditions was B = manual_b * threshold multiplier. By bounding the threshold multiplier above 0, we implemented the typical LBA parameter constraint that *b* > *A*. Overall there were eight threshold multipliers, one for each
+accumulator, for each stimulus type, and for both automation correct and incorrect trials. In Table S6, we include the group average posterior estimates of 
+the threshold multipliers. Overall, our results were not consistent with
+any adaptive adjustments of thresholds in response to automation. In addition,
+Figure S1 demonstrates that model inferences about accumulation rates were similar to those
+reported in text, particularly in supporting the primacy of an inhibition account. Thus,
+for parsimony and the sake of good parameter estimation, we focused on the model reported in text that did not allow for adaptive threshold variations.
+
+Table S6
+
+*Examination of a model that allowed thresholds to vary reactively
+in response to automation. The M (SD) column displays
+the posterior mean and posterior standard deviation of the subject-averaged
+parameter samples for the threshold multiplier parameters. To assist readability, the "Adaptive" column
+denotes whether a participant who was adapting their thresholds in line with the automation would be expected to have a threshold multiplier greater
+or less than 1. For example, on a non-conflict trial with correct automation (row 1), the 
+participant would be expected to drop their "non-conflict" accumulator as a result of reading the automation, and so "Adaptive" reads <1.*
+
+```{r echo= FALSE, results = "asis"}
+# load(
+#   "samples_data/CA_top_thresholdsmult_samples.RData"
+#   )
+# source("dmc/dmc.R")
+# source("dmc/dmc_extras.R")
+# msds_thresholdsmult <- 
+#   get.msds(CA_top_thresholdsmult_samples)
+# save(msds_thresholdsmult, file="img/msds_thresholdsmult")
+
+load("img/msds_thresholdsmult")
+
+threshold_mult <- msds_thresholdsmult[
+  grepl("tb.A", rownames(msds_thresholdsmult)),]
+
+threshold_mult$Stimulus <- "Non-conflict"
+threshold_mult$Stimulus[grepl("c", rownames(threshold_mult))] <-
+  "Conflict"
+
+threshold_mult$Accumulator <- "Non-conflict"
+threshold_mult$Accumulator[grepl("C", rownames(threshold_mult))] <-
+  "Conflict"
+
+threshold_mult$Automation <- "Correct"
+threshold_mult$Automation [grepl("F", rownames(threshold_mult))] <-
+  "Incorrect"
+
+threshold_mult$C<- threshold_mult$Stimulus==threshold_mult$Accumulator
+threshold_mult$Adaptive <- "< 1"
+threshold_mult$Adaptive[threshold_mult$Automation=="Correct" & 
+                          !threshold_mult$C] <- "> 1"
+
+threshold_mult$Adaptive[threshold_mult$Automation=="Incorrect" & 
+                          threshold_mult$C] <- "> 1"
+
+threshold_mult$M_SD <- paste(round(threshold_mult$M,2), " (", 
+                            round(threshold_mult$SD,2),
+                            ")", sep="")
+
+pandoc.table(threshold_mult[,c("Stimulus", "Accumulator", "Automation","Adaptive", "M_SD"
+               )], row.names=FALSE)
+
+```
+
+&nbsp;
+
+
+```{r echo= FALSE}
+Vs_cap <- "Figure S1. Estimates of accumulation rates in a model that allowed for thresholds
+to reactively adapt to automation. 
+The shapes indicate the posterior means and the 
+error bars correspond to the mean plus or minus the 
+posterior standard deviation."
+```
+
+
+```{r echo=FALSE, fig.cap=Vs_cap, fig.height=4, fig.width=8, message=FALSE, warning=FALSE, results="hide"}
+Vs <- msds_thresholdsmult[grep("mean_v", rownames(msds_thresholdsmult)),]
+
+Vs$Cond <- "Manual" 
+Vs$Cond[grep("A", rownames(Vs))] <- "Automation"
+Vs$Auto <- "Automation Success"
+Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure"
+Vs$S <- "Conflict"
+Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict"
+Vs$match <- "Match"
+Vs$match[grep("false", rownames(Vs))] <- "Mismatch"
+
+names(Vs)[names(Vs)=="Cond"] <- "Condition"
+
+ggplot(Vs, aes(factor(Auto),M)) + 
+  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
+  ylab("Accumulation Rate") + xlab("")+
+  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
+  facet_grid(S ~ match,scales = "free", space = "free") 
+
+```
+
+
+# Posterior exploration 
+
+To understand which model mechanisms contributed to our observed effects, we took a 
+"posterior exploration" approach, in which posterior predictions of the model are plotted
+against the data, and compared with posterior predictions of the model with various mechanisms
+removed. The results of our posterior exploration are depicted in Figure S2.
+
+```{r echo= FALSE , results = "hide",}
+exp_cap <- "*Figure S2.* Posterior exploration. Depicts predictions about automation accuracy benefits,
+automation inaccuracy costs, and automation RT costs. To understand how the model fits these effects,
+we attempted removing three mechanisms - excitation effects, inhibition effects, and threshold effects. Mechanisms
+were removed by setting parameters equal to manual conditions. For example, to remove excitation effects,
+the accumulation rates of the accumulators that agree with automation were set to matched accumulation rates in manual conditions. The observed effects in the data are depicted by the dashed lines. We plot model predictions averaged over subjects. The filled circles are the posterior mean predictions, and the error bars represent the 95% credible intervals."
+```
+
+
+```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.width = 6, fig.height=8, fig.cap=exp_cap}
+
+
+# source("dmc/dmc.R")
+# source("dmc/dmc_extras.R")
+# load_model ("LBA", "lba_B.R")
+# 
+# library(dplyr)
+# library(tidyr)
+# library(ggplot2)
+# library(pander)
+# 
+# load("samples_data/CA_top_samples.RData")
+# load("samples_data/CA_top_samples_pp.RData")
+# 
+# automation_effects <- function (currentsim) {
+#   fail_effect <- NA; success_effect <- NA
+#   
+#   effects_tibble <- currentsim %>%
+#     mutate(C=(S=="nn" & R=="N")|(S=="cc" & R=="C")) %>% 
+#     group_by(cond, failtrial) %>%
+#     summarise(prop_correct=mean(C))
+#   
+#   RTeffects_tibble <- currentsim %>%
+#     mutate(C=(S=="nn" & R=="N")|(S=="cc" & R=="C")) %>% 
+#     group_by(cond, failtrial) %>%
+#     summarise(corRT =mean(RT[C]))
+#   
+#   fail_effect <-
+#     effects_tibble$prop_correct[effects_tibble$cond == "M" &
+#                                   effects_tibble$failtrial == "fail"] -
+#     effects_tibble$prop_correct[effects_tibble$cond == "A" &
+#                                   effects_tibble$failtrial == "fail"]
+#   
+#   success_effect <-
+#     effects_tibble$prop_correct[effects_tibble$cond == "A" &
+#                                   effects_tibble$failtrial == "nonf"] -
+#     effects_tibble$prop_correct[effects_tibble$cond == "M" &
+#                                   effects_tibble$failtrial == "nonf"]
+#   
+#   corRT_effect <- 
+#     RTeffects_tibble$corRT[RTeffects_tibble$cond == "A" &
+#                                   RTeffects_tibble$failtrial == "fail"] -
+#     RTeffects_tibble$corRT[RTeffects_tibble$cond == "M" &
+#                                   RTeffects_tibble$failtrial == "fail"]
+#   
+#   out <- c(success_effect, fail_effect, corRT_effect)
+#   names(out) <- c("success_effect", "fail_effect", "corRT_effect")
+#   out
+# }
+# 
+# 
+# pickps_set <- c(rownames(msds)[grepl("mean_v.*.M.fail.false", rownames(msds))],
+#                 rownames(msds)[grepl("mean_v.*.M.nonf.true", rownames(msds))])
+# 
+# pickps_other <- c(rownames(msds)[grepl("mean_v.*.A.fail.false", rownames(msds))],
+#                 rownames(msds)[grepl("mean_v.*.A.nonf.true", rownames(msds))])
+# 
+# noex <- pickps.h.post.predict.dmc(CA_top_samples, save.simulation = TRUE,
+#                                           pickps_set=pickps_set,
+#                                         pickps_other=pickps_other)
+# 
+# 
+# 
+# pickps_set <- c(rownames(msds)[grepl("mean_v.*.M.nonf.false", rownames(msds))],
+#                 rownames(msds)[grepl("mean_v.*.M.fail.true", rownames(msds))])
+# 
+# pickps_other <- c(rownames(msds)[grepl("mean_v.*.A.nonf.false", rownames(msds))],
+#                 rownames(msds)[grepl("mean_v.*.A.fail.true", rownames(msds))])
+# 
+# noinh <- pickps.h.post.predict.dmc(CA_top_samples, save.simulation = TRUE,
+#                                           pickps_set=pickps_set,
+#                                         pickps_other=pickps_other)
+# 
+
+# pickps_set <- rownames(msds)[grepl("B.A*", rownames(msds))]
+# 
+# pickps_other <- rownames(msds)[grepl("B.M*", rownames(msds))]
+# 
+# noB <- pickps.h.post.predict.dmc(CA_top_samples, save.simulation = TRUE,
+#                                           pickps_set=pickps_set,
+#                                         pickps_other=pickps_other)
+# 
+
+
+# 
+# top_auto_effects <- get.effects.dmc(pp, automation_effects)
+# noex_auto_effects <- get.effects.dmc(noex, automation_effects)
+# noinh_auto_effects <- get.effects.dmc(noinh, automation_effects)
+# noB_auto_effects <- get.effects.dmc(noB, automation_effects)
+# # 
+# top_auto_effects$Model <- "Top"
+# noex_auto_effects$Model <- "No_excitation"
+# noinh_auto_effects$Model <- "No_inhibition"
+# noB_auto_effects$Model <- "No_threshold_effects"
+# # 
+# save(noex, noinh, noB, top_auto_effects, noex_auto_effects, noinh_auto_effects,
+#        noB_auto_effects,
+#      file="samples_data/postexp.RData")
+
+load("samples_data/postexp.RData")
+
+effects <- rbind(top_auto_effects[1,], 
+                 noex_auto_effects[1,],
+                 noinh_auto_effects[1,],
+                 noB_auto_effects[1,])
+
+useplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),linetype=2,  show.legend=TRUE)  +ylab("Accuracy Benefit") + ggtitle("Automation Correct") 
+
+effects <- rbind(top_auto_effects[2,], 
+                 noex_auto_effects[2,],
+                 noinh_auto_effects[2,],
+                 noB_auto_effects[2,])
+
+misuseplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),linetype=2,  show.legend=TRUE) +xlab("Model")+ylab("Accuracy Cost") + ggtitle("Automation Incorrect")
+
+
+effects <- rbind(top_auto_effects[3,], 
+                 noex_auto_effects[3,],
+                 noinh_auto_effects[3,],
+                 noB_auto_effects[3,])
+
+RTplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),  show.legend=TRUE, linetype=2)  +ylab("Correct RT Cost") + ggtitle("Automation Incorrect")
+
+grid.arrange(useplot, misuseplot, RTplot)
+
+
 
 ```

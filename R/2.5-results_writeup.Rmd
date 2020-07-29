@@ -74,31 +74,28 @@ cond_auto_se <- arr2df(
 
 
 ##### Accuracy
-Accuracies are displayed in Figure 2. There were main effects of stimulus type, session, 
-condition, and automation success. Responses were more accurate to conflict trials
+Participant accuracies are displayed in Figure 2. There were main effects of stimulus type, session, condition, and automation accuracy. Responses were more accurate to conflict trials 
 (*M* = `r S[S$Stimulus=="Conflict",2]`, *SE* = `r S_se["Conflict"]`)
 than to non-conflict trials
 (*M* = `r S[S$Stimulus=="Non-conflict",2]`, *SE* = `r S_se["Non-conflict"]`).
-Accuracy was higher on session one
+Accuracy was lower on session one
 (*M* = `r sess[sess$Session=="One",2]`, *SE* = `r sess_se["One"]`)
 than on session two
 (*M* = `r sess[sess$Session=="Two",2]`, *SE* = `r sess_se["Two"]`)
-. Critically, the effects of automation condition and automation success interacted, 
-with accuracy higher in the automation condition than the manual condition when automation succeeded
-and much lower when the automation failed, as compared with matched manual trials (Table 2). 
-These results suggest that participants did use the automation to their advantage, 
-but on trials where the automation failed, it imposed a substantial cost to their accuracy (misuse).
-Importantly, accuracy on automation failure trials was far from floor, suggesting
-that participants did not rely on the automation entirely. 
+. The effects of automation condition and automation accuracy interacted. Participant accuracy was higher for trials where participants were provided correct automation (*M* = `r cond_auto[cond_auto$Condition=="Automation" & cond_auto$Automation=="Automation Success",3]`, 
+*SE* = `r cond_auto_se[cond_auto_se$Condition=="Automation" & cond_auto_se$Automation=="Automation Success",3]`) than for corresponding manual trials (*M* = `r cond_auto[cond_auto$Condition=="Manual" & cond_auto$Automation=="Automation Success",3]`, 
+*SE* = `r cond_auto_se[cond_auto_se$Condition=="Manual" & cond_auto_se$Automation=="Automation Failure",3]`), and lower when participants were provided incorrect automation (*M* = `r cond_auto[cond_auto$Condition=="Automation" & cond_auto$Automation=="Automation Failure",3]`, 
+*SE* = `r cond_auto_se[cond_auto_se$Condition=="Manual" & cond_auto_se$Automation=="Automation Failure",3]`), as compared with matched manual trials (*M* = `r cond_auto[cond_auto$Condition=="Manual" & cond_auto$Automation=="Automation Failure",3]`, 
+*SE* = `r cond_auto_se[cond_auto_se$Condition=="Manual" & cond_auto_se$Automation=="Automation Failure",3]`). These results suggest that participants did use the automation to their advantage, but on trials where the automation failed, it imposed a substantial cost to their accuracy. However, importantly, accuracy on automation incorrect trials was far from floor, suggesting that participants did not rely on the automation entirely.
 
 
 ```{r echo= FALSE}
-acc_cap <- "*Figure 2.* Accuracies. Each panel corresponds to one stimulus type, on one experimental session. The error bars included
+acc_cap <- "*Figure 5.* Accuracies. Each panel corresponds to one stimulus type, on one experimental session. The error bars included
 were calculated using the Morey (2008) bias-corrected method for within-subjects error bars."
 ```
 
 
-```{r response_accuracy_graph, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=acc_cap}
+```{r response_accuracy_graph, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 8, fig.width = 13,fig.cap=acc_cap}
 mean_accs <- accs %>% group_by(Stimulus, Condition, Automation, Session) %>%
   summarise(meanacc=mean(acc))
 
@@ -109,33 +106,13 @@ colnames(se_accs)[colnames(se_accs)=="Freq"] <- "seacc"
 
 plot.df <- full_join(mean_accs, se_accs)
 
-ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition), size=3)  +
-  geom_line(aes(y=meanacc, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ 
+ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition, shape=Condition), size=3)  + 
   facet_grid(Session~Stimulus) + geom_errorbar(aes(
     ymax = meanacc + seacc,
     ymin = meanacc - seacc,
     colour = Condition
-  )) +ylab ("Accuracy") +xlab("")
-
-```
-
-Table 2: *Accuracies. Displaying M(SE), with SEs calculated by the Morey (2008) bias-corrected method.*
-```{r accuracy_table, echo= FALSE, message=FALSE, warning=TRUE, results='asis'}
-tmp <- full_join(
-  cond_auto, cond_auto_se)
-
-tmp[,3] <- round(tmp[,3], 2)
-tmp[,4] <- round(tmp[,4], 2)
-
-MSEs<- paste(do.call(paste, c(tmp[,c(3, 4)], sep=" (")),
-      ")", sep="")
-
-cond_auto_table <- cbind(as.data.frame(tmp[,1:2]), MSEs)
-
-pandoc.table(
-  cond_auto_table %>% pivot_wider(names_from = c(Automation),
-                            values_from = MSEs)
-)
+  )) +ylab ("Accuracy") +xlab("") +
+    theme(text = element_text(size = 22))
 
 ```
 
@@ -221,7 +198,9 @@ ggplot(plot.df, aes(Automation, meanRT)) +geom_point(aes(col=Condition), size=3)
   ))
 ```
 
-Table 3: *Correct Response Times. Displaying M(SE), with SEs calculated by the Morey (2008) bias-corrected method.*
+Table 3
+
+*Correct Response Times. Displaying M(SE), with SEs calculated by the Morey (2008) bias-corrected method.*
 ```{r RT_table, echo= FALSE, message=FALSE, warning=TRUE, results='asis'}
 
 tmp <- full_join(
@@ -242,54 +221,147 @@ pandoc.table(
 
 ```
 
+# Error RTs
+
+```{r RT_table_e, echo= FALSE, message=FALSE, warning=TRUE, results='asis'}
+
+RTse <- cleandats %>% group_by(s, Stimulus, Condition, Automation, Session) %>% 
+  filter(!C) %>% 
+  summarise(RT=mean(RT))%>% arrange(Automation)
+
+cond_auto_RTe <- RTse %>% group_by(Condition, Automation) %>% summarise(mean(RT))
+cond_auto_se_RTe <- arr2df(
+  se2(RTs, facs=c("Condition", "Automation"), dvnam="RT"))
+
+
+tmp <- full_join(
+  cond_auto_RTe, cond_auto_se_RTe)
+
+tmp[,3] <- round(tmp[,3], 2)
+tmp[,4] <- round(tmp[,4], 2)
+
+MSEs<- paste(do.call(paste, c(tmp[,c(3, 4)], sep=" (")),
+      ")", sep="")
+
+cond_auto_RTe_table <- cbind(as.data.frame(tmp[,1:2]), MSEs)
+
+pandoc.table(
+  cond_auto_RTe_table %>% pivot_wider(names_from = c(Automation),
+                            values_from = MSEs)
+)
+
+```
 
 
 
+```{r, echo= FALSE, include=FALSE}
 
-<!-- mean_RTs <- RTs %>% group_by(S, cond, failtrial,sess) %>% summarise(meanRT=mean(RT)) -->
+specialdats <- cleandats
+specialdats$subjsesh <- interaction(cleandats$s, cleandats$Session)
 
-<!-- searr= se2(RTs, facs= c("S", "cond", "failtrial", "sess"), dvnam="RT", sfac="s") -->
-<!-- se_RTs <- as.data.frame.table(searr) -->
-<!-- colnames(se_RTs)[colnames(se_RTs)=="Freq"] <- "seRT" -->
-
-
-
-<!-- plot.df <- full_join(mean_RTs, se_RTs) -->
-
-<!-- plot.df$S <- factor(plot.df$S, levels=c("n", "c"), -->
-<!--                     labels=c("Non-conflict", "Conflict")) -->
-
-<!-- plot.df$failtrial <- factor(plot.df$failtrial, levels=c("nonf", "fail"), -->
-<!--                             labels=c("Automation Success", "Automation Failure")) -->
-
-<!-- ggplot(plot.df, aes(failtrial, meanRT)) +geom_point(aes(col=cond), size=3)  +  -->
-<!--   geom_line(aes(y=meanRT, group=interaction(cond, S), col=cond), linetype=2)+  -->
-<!--   facet_grid(sess~S) + geom_errorbar(aes( -->
-<!--     ymax = meanRT + seRT, -->
-<!--     ymin = meanRT - seRT, -->
-<!--     colour = cond -->
-<!--   )) -->
-
-<!-- RT_model <- lmer(RT ~ S * cond * sess * failtrial + (1 |s), -->
-<!--      data = RTs) -->
-
-<!-- Anova(RT_model) -->
-
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond|failtrial),  -->
-<!--            method="pairwise"))  -->
-
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~sess*failtrial), -->
-<!--            interaction=TRUE,  -->
-<!--            method="pairwise"))  -->
+accs <-
+  specialdats %>% group_by(s, Condition, Automation) %>% 
+  filter(!is.na(R)) %>% summarise(acc = mean(C)) %>%
+  arrange(s) %>% arrange(Automation)
 
 
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond|sess), -->
-<!--            method="pairwise"))  -->
+accs_success_effect <- accs %>% group_by(s) %>% 
+  summarise(accboost = acc[Condition=="Automation" & Automation=="Automation Success"]-
+              acc[Condition=="Manual"& Automation=="Automation Success"])
 
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond*sess), -->
-<!--            interaction=TRUE,  -->
-<!--            method="pairwise"))  -->
+
+accs_failure_effect <- accs %>% group_by(s) %>% 
+  summarise(accboost = acc[Condition=="Manual" & Automation=="Automation Failure"]-
+              acc[Condition=="Automation"& Automation=="Automation Failure"])
+
+
+mRTs <-
+  specialdats %>% group_by(s, Condition, Automation) %>% 
+  filter(!is.na(R)) %>% summarise(mRT = mean(RT[C])) %>%
+  arrange(s) %>% arrange(Automation)
+
+
+
+mRTs_failure_effect <- mRTs %>% group_by(s) %>% 
+  summarise(mRTboost = mRT[Condition=="Automation"& Automation=="Automation Failure"] - 
+              mRT[Condition=="Manual" & Automation=="Automation Failure"]
+              )
+
+cor(mRTs_failure_effect$mRTboost, accs_failure_effect$accboost)
+cor.test(mRTs_failure_effect$mRTboost, accs_success_effect$accboost)
+
+
+accs_success_effect$accdrop <- accs_failure_effect$accboost
+accs_success_effect$RTcost <- mRTs_failure_effect$mRTboost
+
+fit_failsuccess <- lm(accdrop~accboost, data=accs_success_effect)
+fit_failRT <- lm(accdrop~RTcost, data=accs_success_effect)
+fit_successRT <- lm(accboost~RTcost, data=accs_success_effect)
+
+theme_set(theme_classic())
+
+ggplot(accs_success_effect, aes(x=accboost, y=accdrop)) + geom_point() + 
+   ylab("Failure cost") + xlab("Success improvement") +
+  geom_abline(slope=fit_failsuccess$coefficients[2], intercept=fit_failsuccess$coefficients[1], linetype=2)
+
+ggplot(accs_success_effect, aes(x=RTcost, y=accboost)) + geom_point() + 
+   ylab("Success improvement") + xlab( "RT cost on failure trials") +
+  geom_abline(slope=fit_successRT$coefficients[2], intercept=fit_successRT$coefficients[1], linetype=2)
+
+ ggplot(accs_success_effect, aes(x=RTcost, y=accdrop)) + geom_point() + 
+   ylab("Failure cost") + xlab( "RT cost on failure trials") +
+  geom_abline(slope=fit_failRT $coefficients[2], intercept=fit_failRT $coefficients[1], linetype=2)
+ 
+
+ users <- accs_success_effect %>%
+   filter(accboost>0.05|accdrop>0.05) %>% .$s
+
+save(users, file="img/users.RData")
+```
+
+```{r, echo= FALSE, include=FALSE}
+ 
+library(readxl) 
+questionnaires <- read_xlsx("auto_trust_qs.xlsx")
+qs <- cbind(questionnaires$pid, rowMeans(questionnaires[2:7]))
+colnames(qs) <- c("s", "rel")
+
+qs<-as.data.frame(qs)
+qs$s <- as.character(qs$s)
+
+
+tmp <- full_join(as.data.frame(qs), accs_success_effect, by="s")
+
+cor_rel_accboost <- cor.test(tmp$rel, tmp$accboost)
+cor_rel_accdrop <-cor.test(tmp$rel, tmp$accdrop)
+ 
+```
+
+We averaged the automation reliability scale across all questions for each participant.
+The mean reliability score was `r mean(qs$rel)` (SD = `r sd(qs$rel)`). Reliablity scores
+did not correlate with boosts in automation accuracy on successful automation trials, *r* (`r cor_rel_accboost$parameter`)= 
+`r cor_rel_accboost$estimate`, *p* = `r cor_rel_accboost$p.value`
+or drops in accuracy on automation incorrect trials *r* (`r cor_rel_accdrop$parameter`)= 
+`r cor_rel_accdrop$estimate`, *p* = `r cor_rel_accdrop$p.value`.
+
+
+
+<!-- # Acc effects individual differences -->
+
+```{r acc_effects_ids, echo= FALSE, include=FALSE, message=FALSE, warning=TRUE, results='asis'}
+acceff<- cleandats %>% group_by(s) %>% summarise(acc=mean(C[Condition=="Automation"]) - mean(C[Condition=="Manual"]), manacc=mean(C[Condition=="Manual"]), autacc=mean(C[Condition=="Automation"])) 
+
+
+acceff %>% ggplot(aes(x=acc)) + geom_histogram()
+
+acceff %>% ggplot(aes(x=manacc, y=acc)) + geom_point() +ylab("Automation Benefit") +
+  geom_line(aes(y=0), linetype=2) + geom_line(aes(y=0.05), linetype=2) 
+
+cor(acceff$acc, acceff$manacc)
+
+acceff %>% ggplot(aes(x=autacc, y=acc)) + geom_point()
+
+
+```
+
+

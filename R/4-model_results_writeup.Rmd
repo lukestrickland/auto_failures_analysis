@@ -13,245 +13,524 @@ by Luke Strickland
 
 source("dmc/dmc.R")
 source("dmc/dmc_extras.R")
-load_model ("LBA", "lba_B_automation.R")
+load_model ("LBA", "lba_B.R")
 
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(pander)
 options(digits=2)
 
-theme_set(theme_simple())
+load("samples_data/CA_top_samples.RData")
 
+# pp <- h.post.predict.dmc(CA_top_samples, save.simulation = TRUE, cores=8)
+# 
+# theme_set(theme_simple())
+# 
+# rescore_column <- function(df) {
+#   df$R <- factor(as.character(toupper(substr(df$S,1,1))==df$R))
+#   new_data <- attr(df, "data")
+#   new_data$R <- factor(as.character(toupper(substr(new_data$S,1,1))==new_data$R))
+# #  new_data <- new_data %>% select(C, everything())
+#   #%>% select(-R)
+#   attr(df, "data") <- new_data
+# #  df %>% select(reps, C, everything())
+#   #%>% select(-R)
+#   df
+# }
+# 
+# pp1 <- lapply(pp, rescore_column)
+# 
+# 
+# fitlist <- GET.fitgglist.dmc(pp1, factors=c("cond", "failtrial"))
+# save(pp, fitlist,
+#      file="samples_data/CA_top_samples_pp.RData")
 
-
+load("samples_data/CA_top_samples_pp.RData")
 
 
 
 ```
 
-```{r accuracy_descriptives_fortext, echo= FALSE, message=FALSE, warning=FALSE}
+# Model Fit
 
-
-```
-
-
-##### Accuracy
-Accuracies are displayed in Figure 2. There were main effects of stimulus type, session, 
-condition, and automation success. Responses were more accurate to conflict trials
-(*M* = `r S[S$Stimulus=="Conflict",2]`, *SE* = `r S_se["Conflict"]`)
-than to non-conflict trials
-(*M* = `r S[S$Stimulus=="Non-conflict",2]`, *SE* = `r S_se["Non-conflict"]`).
-Accuracy was higher on session one
-(*M* = `r sess[sess$Session=="One",2]`, *SE* = `r sess_se["One"]`)
-than on session two
-(*M* = `r sess[sess$Session=="Two",2]`, *SE* = `r sess_se["Two"]`)
-. Critically, the effects of automation condition and automation success interacted, 
-with accuracy higher in the automation condition than the manual condition when automation succeeded
-and much lower when the automation failed, as compared with matched manual trials (Table 2). 
-These results suggest that participants did use the automation to their advantage, 
-but on trials where the automation failed, it imposed a substantial cost to their accuracy (misuse).
-Importantly, accuracy on automation failure trials was far from floor, suggesting
-that participants did not rely on the automation entirely. 
-
+We obtained Bayesian estimates of model parameters using the Dynamic Models 
+of Choice R Suite (Heathcote et al., 2018). These estimates take the form of posterior distributions,
+which are proportional to probability distributions of the model parameters given the data and our prior about the parameter values. The details of estimation
+are discussed in the supplementary materials. Figure 1 displays fit of the posterior predictions of the model to the data. Overall, the model closely fit to the data, including the effects of automation on accuracy and distributions of RT. 
 
 ```{r echo= FALSE}
-acc_cap <- "*Figure 2.* Accuracies. Each panel corresponds to one stimulus type, on one experimental session. The error bars included
-were calculated using the Morey (2008) bias-corrected method for within-subjects error bars."
+pp_cap <- "Figure 1. Posterior predictions of performance, averaged over participants. 
+The model predictions correspond to the white circles, the posterior means correspond to the black shaded dots. The error bars display the 95% posterior credible intervals of the predictions. Three quantiles of response time (RT) are depicted. The bottom lines on the RT plots represent the 0.1 quantile of RT, 
+the middle the median RT, and the top the 
+0.9 quantile of RT."
 ```
 
-
-```{r response_accuracy_graph, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=acc_cap}
-mean_accs <- accs %>% group_by(Stimulus, Condition, Automation, Session) %>%
-  summarise(meanacc=mean(acc))
-
-searr= se2(accs, facs= c("Stimulus", "Condition", "Automation", "Session"),
-dvnam="acc", sfac="s")
-se_accs <- as.data.frame.table(searr)
-colnames(se_accs)[colnames(se_accs)=="Freq"] <- "seacc"
-
-plot.df <- full_join(mean_accs, se_accs)
-
-ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition), size=3)  +
-  geom_line(aes(y=meanacc, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ 
-  facet_grid(Session~Stimulus) + geom_errorbar(aes(
-    ymax = meanacc + seacc,
-    ymin = meanacc - seacc,
-    colour = Condition
-  )) +ylab ("Accuracy") +xlab("")
-
-```
-
-Table 2: *Accuracies. Displaying M(SE), with SEs calculated by the Morey (2008) bias-corrected method.*
-```{r accuracy_table, echo= FALSE, message=FALSE, warning=TRUE, results='asis'}
-tmp <- full_join(
-  cond_auto, cond_auto_se)
-
-tmp[,3] <- round(tmp[,3], 2)
-tmp[,4] <- round(tmp[,4], 2)
-
-MSEs<- paste(do.call(paste, c(tmp[,c(3, 4)], sep=" (")),
-      ")", sep="")
-
-cond_auto_table <- cbind(as.data.frame(tmp[,1:2]), MSEs)
-
-pandoc.table(
-  cond_auto_table %>% pivot_wider(names_from = c(Automation),
-                            values_from = MSEs)
-)
-
-```
+```{r accuracy_descriptives_fortext, echo= FALSE, message=FALSE, warning=FALSE, fig.height = 7, fig.width=7, fig.cap=pp_cap}
 
 
-```{r RT_descriptives_fortext, echo= FALSE, message=FALSE, warning=FALSE}
-#Descriptives for text chunks
-S_RT <- RTs %>% group_by(Stimulus) %>% summarise(mean(RT))
-S_se_RT <- se2(RTs, facs="Stimulus", dvnam="RT")
 
-sess_cond_RT <- RTs %>% group_by(Session, Condition) %>% summarise(mean(RT))
-sess_cond_se_RT <- se2(RTs, facs=c("Session", "Condition"), 
-                    dvnam="RT")
+accs <- fitlist$pps %>% filter(R=="TRUE") %>% select(-R)
 
-cond_auto_RT <- RTs %>% group_by(Condition, Automation) %>% summarise(mean(RT))
-cond_auto_se_RT <- arr2df(
-  se2(RTs, facs=c("Condition", "Automation"), dvnam="RT"))
+accs$cond <- factor(accs$cond, levels=c("A", "M"), labels =
+                      c("Automation Condition", "Manual Condition"))
 
+accs$failtrial <- factor(accs$failtrial, levels=c("nonf", "fail"), labels =
+                      c("Automation Success", "Automation Failure"))
+
+plot1 <- ggplot.RP.dmc(accs, xaxis="cond") +xlab("") +ylab("Accuracy")
+
+corRTs <- fitlist$RTs %>% filter(R=="TRUE") %>% select(-R)
+
+corRTs$cond <- factor(corRTs$cond, levels=c("A", "M"), labels =
+                      c("Automation Condition", "Manual Condition"))
+
+corRTs$failtrial <- factor(corRTs$failtrial, levels=c("nonf", "fail"), labels =
+                      c("Automation Success", "Automation Failure"))
+
+plot2 <- ggplot.RT.dmc(corRTs, xaxis="cond") +xlab("") +ylab("Correct RT")
+
+
+
+errRTs <- fitlist$RTs %>% filter(R=="FALSE") %>% select(-R)
+
+errRTs$cond <- factor(errRTs$cond, levels=c("A", "M"), labels =
+                      c("Automation Condition", "Manual Condition"))
+
+errRTs$failtrial <- factor(errRTs$failtrial, levels=c("nonf", "fail"), labels =
+                      c("Automation Success", "Automation Failure"))
+
+plot3 <- ggplot.RT.dmc(errRTs, xaxis="cond") +xlab("") +ylab("Error RT")
+
+
+grid.arrange(plot1,plot2,plot3)
 
 
 ```
 
+```{r evaluate_model_params_calc, echo= FALSE , results = "hide", message=FALSE, warning=FALSE}
 
-##### Response Times
-Mean correct RTs are displayed in Figure 3. There were main effects of stimulus type, session, 
-condition, and automation success. Correct responses were slower to conflict trials
-(*M* = `r S_RT[S_RT$Stimulus=="Conflict",2]`, *SE* = `r S_se_RT["Conflict"]`)
-than to non-conflict trials
-(*M* = `r S_RT[S_RT$Stimulus=="Non-conflict",2]`, *SE* = `r S_se_RT["Non-conflict"]`). Crucially, as displayed in Table 3, the effects of 
-condition and automation success interacted. On trials where 
-the automation was successful, correct RTs were not subsantially different across
-manual and automated conditions. By contrast, correct RTs 
-were substantially slower on trials where automation failed,
-as compared with matched manual trials.
+# msds <- get.msds(CA_top_samples)
+# 
+# save(msds, file=
+#       "samples_data/msds_top_samples.RData")
 
-The effects of condition and session interacted. On session 1,
-RTs were slower in the automation condition
-(*M* = `r sess_cond_RT %>% filter(Session=='One' & Condition=='Automation') %>% 
-pull('mean(RT)')`,
-*SE* = `r sess_cond_se_RT["One", "Automation"]`)
-than in the manual condition
-(*M* = `r sess_cond_RT %>% filter(Session=='One' & Condition=='Manual') %>% 
-pull('mean(RT)')`,
-*SE* = `r sess_cond_se_RT["One", "Manual"]`)
-.
-On session two, 
-RTs were less substantially slower in the automation condition
-(*M* = `r sess_cond_RT %>% filter(Session=='Two' & Condition=='Automation') %>% 
-pull('mean(RT)')`,
-*SE* = `r sess_cond_se_RT["Two", "Automation"]`)
-than in the manual condition
-(*M* = `r sess_cond_RT %>% filter(Session=='Two' & Condition=='Manual') %>% 
-pull('mean(RT)')`,
-*SE* = `r sess_cond_se_RT["Two", "Manual"]`), 
-with the difference failing to cross the p <.005 threshold.
-Follow up comparisons of the (non-significant) three way interaction 
-of between session, condition and automation success (supplementary materials) indicate that differences
-in RTs on successful automation trials decreased over days,
-but differences between failure trials and matched manual trials remained. 
+load("samples_data/msds_top_samples.RData")
 
+paste.msd <- function(x) paste(signif(x["M"],2), "(", 
+                               signif(x["SD"],2), ")", sep="")
+zpvec <- function(samples, fun){
+    effect<- group.inference.dist(samples, fun)
+    Z <- mean(effect)/sd(effect)
+    p <- minp(effect)
+    if(p<.001) p <- "< .001" else {
+      p = round(p,3)
+      p= paste("= .", 
+      substr(p,3,10), sep="")
+    }
+    c(round(Z,2), p)
+}
+```
+
+
+# Parameter Estimates
+
+For inference we created
+a group-averaged posterior distribution, by averaging the values of each posterior
+sample across participants. The values of the averaged model parameters
+are tabulated in the supplementary materials. In the following sections, we examine the effect of automation
+and accumulation rate and threshold parameters.
+To test parameter differences, we calculate a one-tailed posterior *p* value,
+corresponding to the proportion of posterior samples on which one parameter
+value was higher than another. To accord with the typical intuition associated
+with *p* values, we report the *p* value against whichever direction was 
+closest to an observed effect (e.g., a *p* of 0 is evidence in favour of an effect). Many effects
+were 'significant' in the sense that *p* < .001. To given an estimate of effect size, we
+report the mean of the parameter differences divided by the standard deviation, referred to as
+*Z*.
+
+In the analyses below, we report parameter inference including all participants. However,
+as noted in results, there was some evidence of individual differences in automation use. In the supplementary materials,
+ we include a subset analysis that only included the participants who showed behavioural evidence of automation use. The conclusions drawn from this supplementary analysis are similar to those supported in text, but with stronger effect sizes, suggesting that the effects reported below are driven by the strongest automation users. 
+
+# Excitation and Inhibition
+
+Evidence accumulation rates are plotted in Figure X. The effects
+of automation are evaluated by comparing the accumulation rate towards an automation trial
+with the corresponding accumulation rates in manual conditions.
+Excitation is indicated by a higher rate of accumulation towards the accumulator that the
+automation agrees with. For example, on a conflict trial on which the automation successfully
+recommends 'conflict', excitation would increase the conflict accumulation rate. Inhibition
+is indicated by the degree to which evidence accumulation towards the accumulator that 
+disagrees with the decision aid is reduced. For example, for conflict trials
+that the decision aid successfully labels a conflict, inhibition would reduce 
+accumulation in the 'non-conflict' accumulator.
+
+Table X contains our statistical tests of excitation and inhibition effects. We found
+evidence of both excitation and inhibition effects. However, the observed inhibition
+effects were much larger in magnitude than the observed excitation effects. Furthermore,
+subsequent exploration of the model (supplementary materials) indicated that inhibition was responpsible for the majority of automation's benefits to accuracy on success trials, and the majority of its cost to accuracy and RT on failure trials.
 
 ```{r echo= FALSE}
-RT_cap <- "*Figure 4.* Correct Response Times (RTs). Each panel corresponds to responses to one typer of stimulus on one experimental session. The error bars included were calculated using the Morey (2008) bias-corrected method for within-subjects error bars."
+Vs_cap <- "Estimates of accumulation rates. 
+The shapes indicate the posterior means and the 
+error bars correspond to the mean plus or minus the 
+posterior standard deviation."
 ```
 
+```{r echo=FALSE, fig.cap=Vs_cap, fig.height=4, fig.width=8, message=FALSE, warning=FALSE, results="hide"}
+Vs <- msds[grep("mean_v", rownames(msds)),]
 
-```{r response_RT_graph 1, echo= FALSE, message=FALSE, warning=FALSE,fig.height = 4, fig.width = 13,fig.cap=RT_cap}
-mean_RTs <- RTs %>% group_by(Stimulus, Condition, Automation,Session) %>% summarise(meanRT=mean(RT))
+Vs$Cond <- "Manual" 
+Vs$Cond[grep("A", rownames(Vs))] <- "Automation"
+Vs$Auto <- "Automation Success"
+Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure"
+Vs$S <- "Conflict"
+Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict"
+Vs$match <- "Match"
+Vs$match[grep("false", rownames(Vs))] <- "Mismatch"
 
-searr= se2(RTs, facs= c("Stimulus", "Condition", "Automation", "Session"), dvnam="RT", sfac="s")
-se_RTs <- as.data.frame.table(searr)
-colnames(se_RTs)[colnames(se_RTs)=="Freq"] <- "seRT"
+names(Vs)[names(Vs)=="Cond"] <- "Condition"
 
-
-
-plot.df <- full_join(mean_RTs, se_RTs)
-
-ggplot(plot.df, aes(Automation, meanRT)) +geom_point(aes(col=Condition), size=3)  + 
-  geom_line(aes(y=meanRT, group=interaction(Condition, Stimulus), col=Condition), linetype=2)+ ylab("Mean RT")+
-  facet_grid(Session~Stimulus) + geom_errorbar(aes(
-    ymax = meanRT + seRT,
-    ymin = meanRT - seRT,
-    colour = Condition
-  ))
-```
-
-Table 3: *Correct Response Times. Displaying M(SE), with SEs calculated by the Morey (2008) bias-corrected method.*
-```{r RT_table, echo= FALSE, message=FALSE, warning=TRUE, results='asis'}
-
-tmp <- full_join(
-  cond_auto_RT, cond_auto_se_RT)
-
-tmp[,3] <- round(tmp[,3], 2)
-tmp[,4] <- round(tmp[,4], 2)
-
-MSEs<- paste(do.call(paste, c(tmp[,c(3, 4)], sep=" (")),
-      ")", sep="")
-
-cond_auto_RT_table <- cbind(as.data.frame(tmp[,1:2]), MSEs)
-
-pandoc.table(
-  cond_auto_RT_table %>% pivot_wider(names_from = c(Automation),
-                            values_from = MSEs)
-)
+ggplot(Vs, aes(factor(Auto),M)) + 
+  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
+  ylab("Accumulation Rate") + xlab("")+
+  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
+  facet_grid(S ~ match,scales = "free", space = "free") 
 
 ```
 
+Table X 
+*Statistical tests of automation-induced excitation and inhibition effects. We depict
+Z(p), where Z is the posterior mean of the parameter diference divided by its standard deviation,
+and p is the one-tailed posterior probability against their being an effect.*
+
+```{r echo= FALSE ,results = "hide", message=FALSE, warning=FALSE, results='asis'}
+
+conf_inh_fail <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.cc.M.fail.true",, drop=F] - 
+           thetas[,"mean_v.cc.A.fail.true",, drop=F])
+
+conf_ex_fail <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.cc.A.fail.false",, drop=F] - 
+          thetas[,"mean_v.cc.M.fail.false",, drop=F] 
+           )
+
+conf_ex_success <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.cc.A.nonf.true",, drop=F] -
+          thetas[,"mean_v.cc.M.nonf.true",, drop=F] 
+           )
+
+conf_inh_success <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.cc.M.nonf.false",, drop=F] - 
+           thetas[,"mean_v.cc.A.nonf.false",, drop=F])
+
+
+
+nonconf_inh_fail <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.nn.M.fail.true",, drop=F] - 
+           thetas[,"mean_v.nn.A.fail.true",, drop=F])
+
+nonconf_ex_fail <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.nn.A.fail.false",, drop=F] - 
+          thetas[,"mean_v.nn.M.fail.false",, drop=F] 
+           )
+
+nonconf_ex_success <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.nn.A.nonf.true",, drop=F] -
+          thetas[,"mean_v.nn.M.nonf.true",, drop=F] 
+           )
+
+nonconf_inh_success <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"mean_v.nn.M.nonf.false",, drop=F] - 
+           thetas[,"mean_v.nn.A.nonf.false",, drop=F])
 
 
 
 
-<!-- mean_RTs <- RTs %>% group_by(S, cond, failtrial,sess) %>% summarise(meanRT=mean(RT)) -->
+inhextab <- rbind(
+  c(conf_ex_success, conf_inh_success),
+  c(conf_ex_fail, conf_inh_fail),
+  c(conf_ex_success, nonconf_inh_success),
+  c(conf_ex_fail, nonconf_inh_fail)
+  
+      )
 
-<!-- searr= se2(RTs, facs= c("S", "cond", "failtrial", "sess"), dvnam="RT", sfac="s") -->
-<!-- se_RTs <- as.data.frame.table(searr) -->
-<!-- colnames(se_RTs)[colnames(se_RTs)=="Freq"] <- "seRT" -->
+rownames(inhextab) <- c("Conflict Automation Success", "Conflict Automation Failure",
+                        "Non-conflict Automation Success", "Non-conflict Automation Failure")
+colnames(inhextab) <- c("Excitation", "Inhibition")
 
-
-
-<!-- plot.df <- full_join(mean_RTs, se_RTs) -->
-
-<!-- plot.df$S <- factor(plot.df$S, levels=c("n", "c"), -->
-<!--                     labels=c("Non-conflict", "Conflict")) -->
-
-<!-- plot.df$failtrial <- factor(plot.df$failtrial, levels=c("nonf", "fail"), -->
-<!--                             labels=c("Automation Success", "Automation Failure")) -->
-
-<!-- ggplot(plot.df, aes(failtrial, meanRT)) +geom_point(aes(col=cond), size=3)  +  -->
-<!--   geom_line(aes(y=meanRT, group=interaction(cond, S), col=cond), linetype=2)+  -->
-<!--   facet_grid(sess~S) + geom_errorbar(aes( -->
-<!--     ymax = meanRT + seRT, -->
-<!--     ymin = meanRT - seRT, -->
-<!--     colour = cond -->
-<!--   )) -->
-
-<!-- RT_model <- lmer(RT ~ S * cond * sess * failtrial + (1 |s), -->
-<!--      data = RTs) -->
-
-<!-- Anova(RT_model) -->
-
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond|failtrial),  -->
-<!--            method="pairwise"))  -->
-
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~sess*failtrial), -->
-<!--            interaction=TRUE,  -->
-<!--            method="pairwise"))  -->
+pandoc.table(inhextab)
 
 
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond|sess), -->
-<!--            method="pairwise"))  -->
+```
 
-<!-- summary( -->
-<!--   contrast(lsmeans(RT_model, ~cond*sess), -->
-<!--            interaction=TRUE,  -->
-<!--            method="pairwise"))  -->
+
+# Threshold effects
+
+Threshold estimates are plotted in Figure X, and statistical tests of 
+differences across automated and manual conditions in thresholds are tabulated in Table X.
+Generally, automation had little effect on thresholds.
+On session two, both conflict and non-conflict thresholds were slightly 
+higher in manual conditions than automated conditions. However, simulations 
+indicate that these effects did not contribute
+substantially to automation use, misuse, or the effect 
+of automation failures on correct RTs (supplementary materials). 
+
+```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.width = 8, fig.height=3}
+Bs <- msds[grep("B", rownames(msds)),]
+
+Bs$R <- "Non-conflict"
+Bs$R[grep("C", rownames(Bs))] <- "Conflict"
+Bs$Cond <- "Automation"
+Bs$Cond[grep("M", rownames(Bs))] <- "Manual"
+Bs$Session <- "Session One"
+Bs$Session[grep("2", rownames(Bs))] <- "Session Two"
+
+names(Bs)[names(Bs)=="Cond"] <- "Condition"
+
+ggplot(Bs, aes(factor(R),M)) + 
+  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
+  ylab("Threshold") + xlab("Accumulator")+
+  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
+  facet_grid(.~Session)
+
+
+```
+
+Table X 
+*Statistical tests of differences in thresholds across automated and manual conditions. We depict
+Z(p), where Z is the posterior mean of the parameter diference divided by its standard deviation,
+and p is the one-tailed posterior probability against their being an effect.*
+
+```{r echo= FALSE , results = "asis", message=FALSE, warning=FALSE, fig.width = 8, fig.height=6}
+
+B_N_1_MvA <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"B.M.1.N",, drop=F] -
+          thetas[,"B.A.1.N",, drop=F] 
+           )
+
+B_N_2_MvA <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"B.M.2.N",, drop=F] -
+          thetas[,"B.A.2.N",, drop=F] 
+           )
+
+B_C_1_MvA <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"B.M.1.C",, drop=F] -
+          thetas[,"B.A.1.C",, drop=F] 
+           )
+
+B_C_2_MvA <- zandp(CA_top_samples, 
+        function (thetas)
+          thetas[,"B.M.2.C",, drop=F] -
+          thetas[,"B.A.2.C",, drop=F] 
+           )
+
+Btab <- rbind(
+  c(B_C_1_MvA, B_C_2_MvA),
+  c(B_N_1_MvA, B_N_2_MvA)
+
+      )
+
+rownames(Btab) <- c("Conflict Accumulator",
+                    "Non-conflict Accumulator")
+colnames(Btab) <- c("Session One", "Session Two")
+
+pandoc.table(Btab)
+
+
+
+```
+
+
+
+
+# Model parameters filting out the 8 automation 'non' users
+# Criterion: must have a success accuracy benefit or failure cost > 5%. None who filled this had an effect in the wrong direction on the other statistic.
+
+```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.width = 8, fig.height=4}
+
+load("img/users.RData")
+# 
+# msds_users <- get.msds(CA_top_samples[names(CA_top_samples) %in% users])
+# 
+# save(msds_users, file="samples_data/msds_users.RData")
+
+load("samples_data/msds_users.RData")
+
+
+
+Vs <- msds_users[grep("mean_v", rownames(msds_users)),]
+
+Vs$Cond <- "Manual" 
+Vs$Cond[grep("A", rownames(Vs))] <- "Automation"
+Vs$Auto <- "Automation Success"
+Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure"
+Vs$S <- "Conflict"
+Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict"
+Vs$match <- "Match"
+Vs$match[grep("false", rownames(Vs))] <- "Mismatch"
+
+names(Vs)[names(Vs)=="Cond"] <- "Condition"
+
+ggplot(Vs, aes(factor(Auto),M)) + 
+  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
+  ylab("Accumulation Rate") + xlab("")+
+  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
+  facet_grid(S ~ match,scales = "free", space = "free") 
+
+Bs <- msds_users[grep("B", rownames(msds_users)),]
+
+Bs$R <- "Non-conflict"
+Bs$R[grep("C", rownames(Bs))] <- "Conflict"
+Bs$Cond <- "Automation"
+Bs$Cond[grep("M", rownames(Bs))] <- "Manual"
+Bs$Session <- "Session One"
+Bs$Session[grep("2", rownames(Bs))] <- "Session Two"
+
+names(Bs)[names(Bs)=="Cond"] <- "Condition"
+
+ggplot(Bs, aes(factor(R),M)) + 
+  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
+  ylab("Threshold") + xlab("Accumulator")+
+  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
+  facet_grid(.~Session)
+
+
+```
+
+
+```{r echo= FALSE , results = "asis", message=FALSE, warning=FALSE, fig.width = 8, fig.height=4}
+
+conf_inh_fail <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.cc.M.fail.true",, drop=F] - 
+           thetas[,"mean_v.cc.A.fail.true",, drop=F])
+
+conf_ex_fail <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.cc.A.fail.false",, drop=F] - 
+          thetas[,"mean_v.cc.M.fail.false",, drop=F] 
+           )
+
+conf_ex_success <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.cc.A.nonf.true",, drop=F] -
+          thetas[,"mean_v.cc.M.nonf.true",, drop=F] 
+           )
+
+conf_inh_success <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.cc.M.nonf.false",, drop=F] - 
+           thetas[,"mean_v.cc.A.nonf.false",, drop=F])
+
+
+
+nonconf_inh_fail <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.nn.M.fail.true",, drop=F] - 
+           thetas[,"mean_v.nn.A.fail.true",, drop=F])
+
+nonconf_ex_fail <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.nn.A.fail.false",, drop=F] - 
+          thetas[,"mean_v.nn.M.fail.false",, drop=F] 
+           )
+
+nonconf_ex_success <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.nn.A.nonf.true",, drop=F] -
+          thetas[,"mean_v.nn.M.nonf.true",, drop=F] 
+           )
+
+nonconf_inh_success <- zandp(CA_top_samples[names(CA_top_samples) %in% users], 
+        function (thetas)
+          thetas[,"mean_v.nn.M.nonf.false",, drop=F] - 
+           thetas[,"mean_v.nn.A.nonf.false",, drop=F])
+
+
+
+
+inhextab <- rbind(
+  c(conf_ex_success, conf_inh_success),
+  c(conf_ex_fail, conf_inh_fail),
+  c(conf_ex_success, nonconf_inh_success),
+  c(conf_ex_fail, nonconf_inh_fail)
+  
+      )
+
+rownames(inhextab) <- c("Conflict Automation Success", "Conflict Automation Failure",
+                        "Non-conflict Automation Success", "Non-conflict Automation Failure")
+colnames(inhextab) <- c("Excitation", "Inhibition")
+
+pandoc.table(inhextab)
+
+```
+
+
+```{r results = "hide", echo=FALSE, message=FALSE, warning=FALSE, fig.width = 6, fig.height=8}
+
+
+# top_auto_effects_users <- get.effects.dmc(pp[names(pp) %in% users], automation_effects)
+# noex_auto_effects_users <- get.effects.dmc(noex[names(noex) %in% users], automation_effects)
+# noinh_auto_effects_users <- get.effects.dmc(noinh[names(noinh) %in% users], automation_effects)
+# noB_auto_effects_users <- get.effects.dmc(noB[names(noB) %in% users], automation_effects)
+# #
+# top_auto_effects_users$Model <- "Top"
+# noex_auto_effects_users$Model <- "No_excitation"
+# noinh_auto_effects_users$Model <- "No_inhibition"
+# noB_auto_effects_users$Model <- "No_threshold_effects_users"
+# #
+# save(top_auto_effects_users, noex_auto_effects_users, noinh_auto_effects_users,
+#        noB_auto_effects_users,
+#      file="samples_data/postexp_users.RData")
+
+load("samples_data/postexp_users.RData")
+
+
+effects <- rbind(top_auto_effects_users[1,], 
+                 noex_auto_effects_users[1,],
+                 noinh_auto_effects_users[1,],
+                 noB_auto_effects_users[1,])
+
+useplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),linetype=2,  show.legend=TRUE)  +ylab("Accuracy Benefit") + ggtitle("Automation Success") 
+
+effects <- rbind(top_auto_effects_users[2,], 
+                 noex_auto_effects_users[2,],
+                 noinh_auto_effects_users[2,],
+                 noB_auto_effects_users[2,])
+
+misuseplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),linetype=2,  show.legend=TRUE) +xlab("Model")+ylab("Accuracy Cost") + ggtitle("Automation Failure")
+
+
+effects <- rbind(top_auto_effects_users[3,], 
+                 noex_auto_effects_users[3,],
+                 noinh_auto_effects_users[3,],
+                 noB_auto_effects_users[3,])
+
+RTplot <- ggplot(effects, aes(Model, mean))+ geom_point(size=4)  + geom_errorbar(aes(ymax = upper, ymin = lower), width= 0.2) + 
+ geom_hline(yintercept=0, linetype=1,  show.legend=TRUE)+ geom_hline(aes(yintercept=data),  show.legend=TRUE, linetype=2)  +ylab("Correct RT Cost") + ggtitle("Automation Failure")
+
+grid.arrange(useplot, misuseplot, RTplot)
+
+
+
+
+```

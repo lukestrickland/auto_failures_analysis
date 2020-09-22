@@ -173,108 +173,83 @@ make_contrast_table(summary(
 
 ```
 
+# Analysis of correlations with automation trust questionnaire
 
-## Modelling adaptive threshold responses to automation
-Our model was parameterized the same way as the model reported
-in text, with the exception of thresholds. To allow thresholds to
-vary in response to automation, we included a "threshold multiplier"
-parameter for each threshold on both automation correct and incorrect trials.
-The threshold level in automation conditions was B = manual_b * threshold multiplier. By bounding the threshold multiplier above 0, we implemented the typical LBA parameter constraint that *b* > *A*. Overall there were eight threshold multipliers, one for each
-accumulator, for each stimulus type, and for both automation correct and incorrect trials. In Table S6, we include the group average posterior estimates of 
-the threshold multipliers. Overall, our results were not consistent with
-any adaptive adjustments of thresholds in response to automation. In addition,
-Figure S1 demonstrates that model inferences about accumulation rates were similar to those
-reported in text, particularly in supporting the primacy of an inhibition account. Thus,
-for parsimony and the sake of good parameter estimation, we focused on the model reported in text that did not allow for adaptive threshold variations.
 
-Table S6
+```{r, echo= FALSE, include=FALSE}
 
-*Examination of a model that allowed thresholds to vary reactively
-in response to automation. The M (SD) column displays
-the posterior mean and posterior standard deviation of the subject-averaged
-parameter samples for the threshold multiplier parameters. To assist readability, the "Adaptive" column
-denotes whether a participant who was adapting their thresholds in line with the automation would be expected to have a threshold multiplier greater
-or less than 1. For example, on a non-conflict trial with correct automation (row 1), the 
-participant would be expected to drop their "non-conflict" accumulator as a result of reading the automation, and so "Adaptive" reads <1.*
+specialdats <- cleandats
+specialdats$subjsesh <- interaction(cleandats$s, cleandats$Session)
 
-```{r echo= FALSE, results = "asis"}
-# load(
-#   "samples_data/CA_top_thresholdsmult_samples.RData"
-#   )
-# source("dmc/dmc.R")
-# source("dmc/dmc_extras.R")
-# msds_thresholdsmult <- 
-#   get.msds(CA_top_thresholdsmult_samples)
-# save(msds_thresholdsmult, file="img/msds_thresholdsmult")
+accs <-
+  specialdats %>% group_by(s, Condition, Automation) %>%
+  filter(!is.na(R)) %>% summarise(acc = mean(C)) %>%
+  arrange(s) %>% arrange(Automation)
 
-load("img/msds_thresholdsmult")
 
-threshold_mult <- msds_thresholdsmult[
-  grepl("tb.A", rownames(msds_thresholdsmult)),]
+accs_success_effect <- accs %>% group_by(s) %>%
+  summarise(accboost = acc[Condition=="Automation" & Automation=="Automation Success"]-
+              acc[Condition=="Manual"& Automation=="Automation Success"])
 
-threshold_mult$Stimulus <- "Non-conflict"
-threshold_mult$Stimulus[grepl("c", rownames(threshold_mult))] <-
-  "Conflict"
 
-threshold_mult$Accumulator <- "Non-conflict"
-threshold_mult$Accumulator[grepl("C", rownames(threshold_mult))] <-
-  "Conflict"
+accs_failure_effect <- accs %>% group_by(s) %>%
+  summarise(accboost = acc[Condition=="Manual" & Automation=="Automation Failure"]-
+              acc[Condition=="Automation"& Automation=="Automation Failure"])
 
-threshold_mult$Automation <- "Correct"
-threshold_mult$Automation [grepl("F", rownames(threshold_mult))] <-
-  "Incorrect"
 
-threshold_mult$C<- threshold_mult$Stimulus==threshold_mult$Accumulator
-threshold_mult$Adaptive <- "< 1"
-threshold_mult$Adaptive[threshold_mult$Automation=="Correct" & 
-                          !threshold_mult$C] <- "> 1"
+mRTs <-
+  specialdats %>% group_by(s, Condition, Automation) %>%
+  filter(!is.na(R)) %>% summarise(mRT = mean(RT[C])) %>%
+  arrange(s) %>% arrange(Automation)
 
-threshold_mult$Adaptive[threshold_mult$Automation=="Incorrect" & 
-                          threshold_mult$C] <- "> 1"
 
-threshold_mult$M_SD <- paste(round(threshold_mult$M,2), " (", 
-                            round(threshold_mult$SD,2),
-                            ")", sep="")
 
-pandoc.table(threshold_mult[,c("Stimulus", "Accumulator", "Automation","Adaptive", "M_SD"
-               )], row.names=FALSE)
+mRTs_failure_effect <- mRTs %>% group_by(s) %>%
+  summarise(mRTboost = mRT[Condition=="Automation"& Automation=="Automation Failure"] -
+              mRT[Condition=="Manual" & Automation=="Automation Failure"]
+              )
+
+
+
+accs_success_effect$accdrop <- accs_failure_effect$accboost
+accs_success_effect$RTcost <- mRTs_failure_effect$mRTboost
+
 
 ```
 
-&nbsp;
 
 
-```{r echo= FALSE}
-Vs_cap <- "Figure S1. Estimates of accumulation rates in a model that allowed for thresholds
-to reactively adapt to automation. 
-The shapes indicate the posterior means and the 
-error bars correspond to the mean plus or minus the 
-posterior standard deviation."
+```{r, echo= FALSE, include=FALSE}
+
+library(readxl)
+questionnaires <- read_xlsx("auto_trust_qs.xlsx")
+qs <- cbind(questionnaires$pid, rowMeans(questionnaires[2:7]))
+colnames(qs) <- c("s", "rel")
+
+qs<-as.data.frame(qs)
+qs$s <- as.character(qs$s)
+
+
+tmp <- full_join(as.data.frame(qs), accs_success_effect, by="s")
+
+cor_rel_accboost <- cor.test(tmp$rel, tmp$accboost)
+cor_rel_accdrop <-cor.test(tmp$rel, tmp$accdrop)
+
+cor_rel_RTcost <-cor.test(tmp$rel, tmp$RTcost)
+
+
 ```
 
+We averaged the automation reliability scale across all questions for each participant.
+The mean reliability score was `r mean(qs$rel)` (SD = `r sd(qs$rel)`). Reliablity scores
+did not correlate with boosts in automation accuracy on successful automation trials, *r* (`r cor_rel_accboost$parameter`)=
+`r cor_rel_accboost$estimate`, *p* = `r cor_rel_accboost$p.value`
+costs to accuracy on automation incorrect trials *r* (`r cor_rel_accdrop$parameter`)=
+`r cor_rel_accdrop$estimate`, *p* = `r cor_rel_accdrop$p.value`, or costs to RT
+on automation incorrect trials, *r* (`r cor_rel_RTcost$parameter`)=
+`r cor_rel_accdrop$estimate`, *p* = `r cor_rel_RTcost$p.value`.
 
-```{r echo=FALSE, fig.cap=Vs_cap, fig.height=4, fig.width=8, message=FALSE, warning=FALSE, results="hide"}
-Vs <- msds_thresholdsmult[grep("mean_v", rownames(msds_thresholdsmult)),]
 
-Vs$Cond <- "Manual" 
-Vs$Cond[grep("A", rownames(Vs))] <- "Automation"
-Vs$Auto <- "Automation Success"
-Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure"
-Vs$S <- "Conflict"
-Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict"
-Vs$match <- "Match"
-Vs$match[grep("false", rownames(Vs))] <- "Mismatch"
-
-names(Vs)[names(Vs)=="Cond"] <- "Condition"
-
-ggplot(Vs, aes(factor(Auto),M)) + 
-  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
-  geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
-  ylab("Accumulation Rate") + xlab("")+
-  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
-  facet_grid(S ~ match,scales = "free", space = "free") 
-
-```
 
 
 # Posterior exploration 
@@ -296,18 +271,18 @@ the accumulation rates of the accumulators that agree with automation were set t
 ```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.width = 6, fig.height=8, fig.cap=exp_cap}
 
 
-# source("dmc/dmc.R")
-# source("dmc/dmc_extras.R")
-# load_model ("LBA", "lba_B.R")
-# 
-# library(dplyr)
-# library(tidyr)
-# library(ggplot2)
-# library(pander)
-# 
-# load("samples_data/CA_top_samples.RData")
-# load("samples_data/CA_top_samples_pp.RData")
-# 
+source("dmc/dmc.R")
+source("dmc/dmc_extras.R")
+load_model ("LBA", "lba_B.R")
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(pander)
+
+load("samples_data/CA_top_samples.RData")
+load("samples_data/CA_top_samples_pp.RData")
+#
 # automation_effects <- function (currentsim) {
 #   fail_effect <- NA; success_effect <- NA
 #   
@@ -425,3 +400,124 @@ grid.arrange(useplot, misuseplot, RTplot)
 
 
 ```
+
+
+
+
+```{r echo= FALSE , results = "asis", message=FALSE, warning=FALSE}
+
+load("samples_data/msds_top_samples.RData")
+
+msds$M <- round(msds$M, 2)
+msds$SD <- round(msds$SD, 2)
+
+pandoc.table(msds)
+
+```
+
+
+
+
+
+<!-- ## Modelling adaptive threshold responses to automation -->
+<!-- Our model was parameterized the same way as the model reported -->
+<!-- in text, with the exception of thresholds. To allow thresholds to -->
+<!-- vary in response to automation, we included a "threshold multiplier" -->
+<!-- parameter for each threshold on both automation correct and incorrect trials. -->
+<!-- The threshold level in automation conditions was B = manual_b * threshold multiplier. By bounding the threshold multiplier above 0, we implemented the typical LBA parameter constraint that *b* > *A*. Overall there were eight threshold multipliers, one for each -->
+<!-- accumulator, for each stimulus type, and for both automation correct and incorrect trials. In Table S6, we include the group average posterior estimates of  -->
+<!-- the threshold multipliers. Overall, our results were not consistent with -->
+<!-- any adaptive adjustments of thresholds in response to automation. In addition, -->
+<!-- Figure S1 demonstrates that model inferences about accumulation rates were similar to those -->
+<!-- reported in text, particularly in supporting the primacy of an inhibition account. Thus, -->
+<!-- for parsimony and the sake of good parameter estimation, we focused on the model reported in text that did not allow for adaptive threshold variations. -->
+
+<!-- Table S6 -->
+
+<!-- *Examination of a model that allowed thresholds to vary reactively -->
+<!-- in response to automation. The M (SD) column displays -->
+<!-- the posterior mean and posterior standard deviation of the subject-averaged -->
+<!-- parameter samples for the threshold multiplier parameters. To assist readability, the "Adaptive" column -->
+<!-- denotes whether a participant who was adapting their thresholds in line with the automation would be expected to have a threshold multiplier greater -->
+<!-- or less than 1. For example, on a non-conflict trial with correct automation (row 1), the  -->
+<!-- participant would be expected to drop their "non-conflict" accumulator as a result of reading the automation, and so "Adaptive" reads <1.* -->
+
+<!-- ```{r echo= FALSE, results = "asis"} -->
+<!-- # load( -->
+<!-- #   "samples_data/CA_top_thresholdsmult_samples.RData" -->
+<!-- #   ) -->
+<!-- # source("dmc/dmc.R") -->
+<!-- # source("dmc/dmc_extras.R") -->
+<!-- # msds_thresholdsmult <-  -->
+<!-- #   get.msds(CA_top_thresholdsmult_samples) -->
+<!-- # save(msds_thresholdsmult, file="img/msds_thresholdsmult") -->
+
+<!-- load("img/msds_thresholdsmult") -->
+
+<!-- threshold_mult <- msds_thresholdsmult[ -->
+<!--   grepl("tb.A", rownames(msds_thresholdsmult)),] -->
+
+<!-- threshold_mult$Stimulus <- "Non-conflict" -->
+<!-- threshold_mult$Stimulus[grepl("c", rownames(threshold_mult))] <- -->
+<!--   "Conflict" -->
+
+<!-- threshold_mult$Accumulator <- "Non-conflict" -->
+<!-- threshold_mult$Accumulator[grepl("C", rownames(threshold_mult))] <- -->
+<!--   "Conflict" -->
+
+<!-- threshold_mult$Automation <- "Correct" -->
+<!-- threshold_mult$Automation [grepl("F", rownames(threshold_mult))] <- -->
+<!--   "Incorrect" -->
+
+<!-- threshold_mult$C<- threshold_mult$Stimulus==threshold_mult$Accumulator -->
+<!-- threshold_mult$Adaptive <- "< 1" -->
+<!-- threshold_mult$Adaptive[threshold_mult$Automation=="Correct" &  -->
+<!--                           !threshold_mult$C] <- "> 1" -->
+
+<!-- threshold_mult$Adaptive[threshold_mult$Automation=="Incorrect" &  -->
+<!--                           threshold_mult$C] <- "> 1" -->
+
+<!-- threshold_mult$M_SD <- paste(round(threshold_mult$M,2), " (",  -->
+<!--                             round(threshold_mult$SD,2), -->
+<!--                             ")", sep="") -->
+
+<!-- pandoc.table(threshold_mult[,c("Stimulus", "Accumulator", "Automation","Adaptive", "M_SD" -->
+<!--                )], row.names=FALSE) -->
+
+<!-- ``` -->
+
+<!-- &nbsp; -->
+
+
+<!-- ```{r echo= FALSE} -->
+<!-- Vs_cap <- "Figure S1. Estimates of accumulation rates in a model that allowed for thresholds -->
+<!-- to reactively adapt to automation.  -->
+<!-- The shapes indicate the posterior means and the  -->
+<!-- error bars correspond to the mean plus or minus the  -->
+<!-- posterior standard deviation." -->
+<!-- ``` -->
+
+
+<!-- ```{r echo=FALSE, fig.cap=Vs_cap, fig.height=4, fig.width=8, message=FALSE, warning=FALSE, results="hide"} -->
+<!-- Vs <- msds_thresholdsmult[grep("mean_v", rownames(msds_thresholdsmult)),] -->
+
+<!-- Vs$Cond <- "Manual"  -->
+<!-- Vs$Cond[grep("A", rownames(Vs))] <- "Automation" -->
+<!-- Vs$Auto <- "Automation Success" -->
+<!-- Vs$Auto[grep("fail", rownames(Vs))] <- "Automation Failure" -->
+<!-- Vs$S <- "Conflict" -->
+<!-- Vs$S[grep("nn", rownames(Vs))] <- "Non-conflict" -->
+<!-- Vs$match <- "Match" -->
+<!-- Vs$match[grep("false", rownames(Vs))] <- "Mismatch" -->
+
+<!-- names(Vs)[names(Vs)=="Cond"] <- "Condition" -->
+
+<!-- ggplot(Vs, aes(factor(Auto),M)) +  -->
+<!--   geom_point(stat = "identity",aes(col=Condition), size=2.5) + -->
+<!--   geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+  -->
+<!--   ylab("Accumulation Rate") + xlab("")+ -->
+<!--   geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) + -->
+<!--   facet_grid(S ~ match,scales = "free", space = "free")  -->
+
+<!-- ``` -->
+

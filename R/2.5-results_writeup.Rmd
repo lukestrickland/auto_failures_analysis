@@ -109,7 +109,7 @@ ggplot(plot.df, aes(Automation, meanacc)) +geom_point(aes(col=Condition, shape=C
   facet_grid(Session~Stimulus) + geom_errorbar(aes(
     ymax = meanacc + seacc,
     ymin = meanacc - seacc,
-    colour = Condition
+    colour = Condition, width = 0.3
   )) +ylab ("Accuracy") +xlab("") +
     theme(text = element_text(size = 22))
 
@@ -188,11 +188,11 @@ colnames(se_RTs)[colnames(se_RTs)=="Freq"] <- "seRT"
 plot.df <- full_join(mean_RTs, se_RTs)
 
 ggplot(plot.df, aes(Automation, meanRT)) +geom_point(aes(col=Condition, shape=Condition), size=3)  + 
-   ylab("Mean RT")+
+   ylab("Mean RT")+ xlab("") +
   facet_grid(Session~Stimulus) + geom_errorbar(aes(
     ymax = meanRT + seRT,
     ymin = meanRT - seRT,
-    colour = Condition
+    colour = Condition, width = 0.3
   ))  +
     theme(text = element_text(size = 22))
 ```

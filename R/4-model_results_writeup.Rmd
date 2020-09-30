@@ -15,7 +15,7 @@ source("dmc/dmc.R")
 source("dmc/dmc_extras.R")
 load_model ("LBA", "lba_B.R")
 
-#theme_set(theme_classic())
+theme_set(theme_simple())
 
 library(dplyr)
 library(tidyr)
@@ -251,8 +251,11 @@ pandoc.table(inhextab)
 
 Threshold estimates are plotted in Figure 9. Statistical tests of differences across automated and manual conditions in thresholds are tabulated in Table 3. Overall, automation had little effect on thresholds. On session two, both conflict and non-conflict thresholds were slightly higher in manual conditions than automated conditions. However, simulations indicate that these effects did not contribute substantially to automation use or the effect of automation failures on correct RTs (supplementary materials). Thus, in the current design, automation primarily affected participants’ evidence accumulation, with little evidence for substantial shifts in their speed-accuracy trade-offs or bias. 
 
+```{r echo= FALSE}
+Bs_cap <- "Figure 9. Estimates of thresholds. The shapes indicate the posterior means and the error bars correspond to the mean plus or minus the posterior standard deviation."
+```
 
-```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.width = 8, fig.height=3}
+```{r echo= FALSE , results = "hide", message=FALSE, warning=FALSE, fig.cap = Bs_cap, fig.width = 8, fig.height=3}
 Bs <- msds[grep("B", rownames(msds)),]
 
 Bs$R <- "Non-conflict"
@@ -265,10 +268,9 @@ Bs$Session[grep("2", rownames(Bs))] <- "Session Two"
 names(Bs)[names(Bs)=="Cond"] <- "Condition"
 
 ggplot(Bs, aes(factor(R),M)) + 
-  geom_point(stat = "identity",aes(col=Condition), size=2.5) +
+  geom_point(stat = "identity",aes(col=Condition, shape=Condition), size=2.5) +
   geom_errorbar(aes(ymax = M + SD, ymin = M - SD, width = 0.3, col=Condition))+ 
   ylab("Threshold") + xlab("Accumulator")+
-  geom_line(aes(y=M, group=Condition, col=Condition), linetype=2) +
   facet_grid(.~Session)
 
 
